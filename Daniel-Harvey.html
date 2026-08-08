@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Daniel Harvey - Resume</title>
+<style>
+  @page { margin: 0.4in 0.45in; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    color: #222;
+    font-size: 14px;
+    line-height: 1.45;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 4px 40px;
+  }
+  h1.name {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin: 0 0 4px 0;
+    color: #1a1a1a;
+  }
+  .contact {
+    text-align: center;
+    font-size: 12.5px;
+    color: #333;
+    margin-bottom: 14px;
+  }
+  h2.section {
+    color: #2e7d32;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #2e7d32;
+    padding-bottom: 3px;
+    margin: 16px 0 8px 0;
+  }
+  .summary {
+    text-align: justify;
+    margin: 0;
+  }
+  .skills-row {
+    margin-bottom: 5px;
+  }
+  .skills-row .label {
+    font-weight: 700;
+  }
+  .job {
+    margin-bottom: 12px;
+  }
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 15px;
+    color: #1a1a1a;
+  }
+  .job-subheader {
+    display: flex;
+    justify-content: space-between;
+    font-style: italic;
+    font-size: 12px;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  ul.bullets {
+    margin: 2px 0 0 0;
+    padding-left: 18px;
+  }
+  ul.bullets li {
+    margin-bottom: 3px;
+    text-align: justify;
+  }
+  .edu-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  .edu-subheader {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-style: italic;
+    color: #333;
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="name">Daniel Harvey</h1>
+  <div class="contact">786 751 9705 | danielharvey129@outlook.com | Miami, FL</div>
+
+  <h2 class="section">Summary</h2>
+  <p class="summary">
+    Senior/principal engineer with 10+ years delivering Java/Spring Boot platforms and REST APIs with strong ownership across
+    architecture, delivery, and operations in cloud-native Azure environments. Hands-on leader who pairs modern Angular/React UI
+    development with scalable data systems (MySQL/Snowflake) and reliability practices (observability, incident response, CI/CD).
+    Experienced applying AI/ML techniques to improve developer productivity and customer outcomes through intelligent automation and
+    data-driven decisioning.
+  </p>
+
+  <h2 class="section">Skills</h2>
+  <div class="skills-row"><span class="label">Backend:</span> Java, Spring Boot, Spring MVC, Spring Security, Hibernate/JPA, RESTful APIs, Microservices, Distributed systems, Kafka, gRPC, Python, Node.js</div>
+  <div class="skills-row"><span class="label">Frontend:</span> Angular, React, TypeScript, JavaScript, RxJS, HTML/CSS, SPA architecture</div>
+  <div class="skills-row"><span class="label">Cloud:</span> Microsoft Azure, AKS, Azure App Service, Azure Functions, Azure API Management, Azure Storage, Azure Key Vault, Azure Monitor</div>
+  <div class="skills-row"><span class="label">Data:</span> MySQL, Snowflake, PostgreSQL, DynamoDB, Redis, Elasticsearch, Data modeling, Query optimization, ETL/ELT</div>
+  <div class="skills-row"><span class="label">DevOps/IaC:</span> GitHub, GitHub Actions, CI/CD, Docker, Kubernetes, Terraform, Helm, Blue/green deployments</div>
+  <div class="skills-row"><span class="label">Observability:</span> Datadog, OpenTelemetry, Distributed tracing, Structured logging, SLO/SLI, Incident response, RCA/postmortems</div>
+  <div class="skills-row"><span class="label">AI/ML:</span> LLM-assisted development workflows, RAG patterns, Feature engineering, Model evaluation/monitoring, Anomaly detection, A/B testing</div>
+  <div class="skills-row"><span class="label">Testing:</span> JUnit 5, Mockito, Spring Test, Testcontainers, Contract testing, Cypress, Playwright</div>
+  <div class="skills-row"><span class="label">Security:</span> OAuth2/OIDC, JWT, OWASP Top 10, Secrets management, Encryption in transit/at rest, RBAC, Secure SDLC</div>
+
+  <h2 class="section">Employment History</h2>
+
+  <div class="job">
+    <div class="job-header"><span>Luxoft</span><span>New York, NY</span></div>
+    <div class="job-subheader"><span>Principal Software Engineer / Tech Lead</span><span>06/2023 - 05/2026</span></div>
+    <ul class="bullets">
+      <li>Led end-to-end delivery of Java 17 / Spring Boot microservices on Azure AKS, improving peak throughput ~35% via caching, async processing, and targeted query optimization in MySQL</li>
+      <li>Designed versioned REST APIs and integration patterns (idempotency, retries, circuit breakers) to improve cross-service reliability; reduced partner-integration defects ~25% through contract-first design and OpenAPI governance</li>
+      <li>Established engineering standards for Spring Security (OAuth2/OIDC, JWT, RBAC) and secure-by-default templates; cut recurring security findings by embedding SAST/DAST gates into GitHub Actions</li>
+      <li>Built a responsive internal portal using Angular + TypeScript that surfaced operational KPIs and workflow status from backend APIs, reducing time-to-triage for support teams by ~30%</li>
+      <li>Implemented observability with Datadog + OpenTelemetry (traces, logs, metrics) and defined SLOs; decreased MTTR ~40% through improved alert quality, runbooks, and on-call readiness</li>
+      <li>Modernized data workflows by landing events to Snowflake and optimizing ELT pipelines; improved analytics freshness from daily to near-hourly for key business dashboards</li>
+      <li>Introduced Terraform + Helm-based IaC for repeatable environments and blue/green releases on AKS, increasing deployment frequency from weekly to multiple times per week with safer rollbacks</li>
+      <li>Delivered AI-enabled engineering productivity improvements by integrating an internal RAG assistant (policy + service docs) into PR review and incident workflows, reducing time spent searching for operational context by ~20%</li>
+    </ul>
+  </div>
+
+  <div class="job">
+    <div class="job-header"><span>Amazon</span><span>Seattle, WA</span></div>
+    <div class="job-subheader"><span>Principal Software Engineer</span><span>03/2020 - 05/2023</span></div>
+    <ul class="bullets">
+      <li>Owned architecture and delivery of distributed services in Java / Spring Boot, defining API standards, service boundaries, and operational requirements for high-availability systems</li>
+      <li>Built and evolved REST integrations across multiple teams, improving backward compatibility and reducing breaking changes through versioning, consumer-driven contracts, and automated compatibility tests</li>
+      <li>Led performance and scalability initiatives across compute and data layers, tuning MySQL schemas/indexes and introducing Redis caching to reduce p95 latency by ~30%</li>
+      <li>Implemented end-to-end CI/CD with GitHub Actions, automated testing (JUnit/Mockito/Testcontainers), and progressive delivery patterns to reduce change failure rate and speed up releases</li>
+      <li>Strengthened observability using Datadog dashboards, tracing, and alerting; drove incident response improvements with RCAs and action-item tracking that reduced repeat incidents ~20%</li>
+      <li>Partnered with product and SRE to reduce technical debt through targeted refactors and modernization, improving maintainability and lowering on-call load</li>
+      <li>Mentored senior and mid-level engineers through design reviews, PR feedback, and architecture docs, raising the quality bar for security, testing, and operational readiness</li>
+    </ul>
+  </div>
+
+  <div class="job">
+    <div class="job-header"><span>Deloitte</span><span>Seattle, WA</span></div>
+    <div class="job-subheader"><span>Senior Software Engineer</span><span>01/2015 - 02/2020</span></div>
+    <ul class="bullets">
+      <li>Developed enterprise applications using Java and Spring Boot, delivering secure REST APIs and service integrations for client-facing platforms</li>
+      <li>Built SPA features with React and TypeScript, collaborating with backend teams to define API contracts and improve end-user workflows</li>
+      <li>Designed and optimized relational data models in MySQL and PostgreSQL, improving report performance and reducing long-running queries through indexing and query rewrites</li>
+      <li>Implemented automated testing with JUnit and Mockito and introduced CI practices that reduced regression defects and improved release confidence</li>
+    </ul>
+  </div>
+
+  <h2 class="section">Education</h2>
+  <div class="edu-header"><span>Washington State University</span><span>Pullman, WA</span></div>
+  <div class="edu-subheader"><span>Bachelor of Science, Computer Engineering</span><span>2010 - 2014</span></div>
+
+</body>
+</html>
