@@ -1,0 +1,29 @@
+# Current scraper and Excel export
+pandas>=2.2
+requests>=2.32
+openpyxl>=3.1
+
+# Planned user interface and data models
+streamlit>=1.42
+pydantic>=2.10
+python-dotenv>=1.0
+
+# Scraping
+beautifulsoup4>=4.12
+playwright>=1.50
+
+# CV parsing and templates
+PyMuPDF>=1.25
+python-docx>=1.1
+docxtpl>=0.19
+
+# Job matching and ranking
+scikit-learn>=1.6
+
+# Optional AI workflow and model integration
+langchain>=1.0
+langgraph>=1.0
+langchain-openai>=1.0
+
+# Testing
+pytest>=8.3
