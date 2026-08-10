@@ -14,7 +14,7 @@ or experience that are not present in the original CV.
 1. Upload a PDF or DOCX CV.
 2. Extract skills, experience, job titles, and likely career domain.
 3. Let the user review and edit the extracted profile.
-4. Prefill the job search form from that profile.
+4. Prefill the job search form that profile.
 5. Scrape jobs from the sources selected by the user.
 6. Remove duplicates and clearly unrelated jobs.
 7. Rank the remaining jobs and explain each score.
@@ -32,7 +32,7 @@ or experience that are not present in the original CV.
 - PyMuPDF and python-docx for reading CVs
 - scikit-learn for initial keyword and TF-IDF ranking
 - SQLite for application data and Pandas for CSV export
-- docxtpl for editable DOCX templates
+- docxtpl for editable DOCX templates / HTML templates connected with backend
 - LangGraph for optional AI workflow orchestration
 - pytest for automated tests
 
@@ -51,7 +51,7 @@ scrapers/                 One file for each job source
 matching/                 Filtering, scoring, and score explanations
 storage/                  SQLite storage and CSV export
 customizer/               CV tailoring and template rendering
-templates/                Prebuilt DOCX templates
+templates/                Prebuilt DOCX templates / HTML templates
 tests/                    Tests for each module
 ```
 
