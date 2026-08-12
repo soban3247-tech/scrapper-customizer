@@ -17,7 +17,7 @@ tested.
 
 ## Phase 1: Core Models and Scraper Refactor
 
-- [ ] Define Pydantic models for `Profile`, `Job`, `SearchConfig`, and `MatchResult`
+- [x] Define Pydantic models for `Profile`, `Job`, `SearchConfig`, and `MatchResult`
 - [ ] Define one common interface for all scraper modules
 - [ ] Move each scraper from `UI.py` into its own file
 - [ ] Add a scraper registry so the UI can enable sources by name
