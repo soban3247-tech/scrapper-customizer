@@ -7,8 +7,8 @@ tested.
 ## Phase 0: Project Setup
 
 - [x] Write the project proposal and architecture
-- [x] Document setup and run commands
-- [x] Create the initial dependency list for `uv`
+- [ ] Document setup and run commands
+- [ ] Create the initial dependency list for `uv`
 - [ ] Add `.gitignore` for `.venv`, generated CVs, databases, and secrets
 - [ ] Add `.env.example` for optional API keys
 - [ ] Create the planned package and test directories
