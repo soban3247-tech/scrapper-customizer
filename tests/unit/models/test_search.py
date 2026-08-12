@@ -27,6 +27,22 @@ def test_search_config_cleans_lists_and_duplicate_sources() -> None:
     assert config.sources == [JobSource.REMOTIVE]
 
 
+def test_search_config_accepts_future_source_and_generic_options() -> None:
+    config = SearchConfig(
+        query="developer",
+        sources=["future-board"],
+        source_options={
+            "Future-Board": {"tenant": "example", "include_contracts": True}
+        },
+    )
+
+    assert config.sources == ["future-board"]
+    assert config.options_for("future-board") == {
+        "tenant": "example",
+        "include_contracts": True,
+    }
+
+
 def test_board_source_requires_at_least_one_board_name() -> None:
     with pytest.raises(ValidationError, match="greenhouse_boards"):
         SearchConfig(query="developer", sources=[JobSource.GREENHOUSE])
