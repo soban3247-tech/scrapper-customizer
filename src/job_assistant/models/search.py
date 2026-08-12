@@ -76,12 +76,32 @@ class SearchConfig(BaseModel):
     def require_selected_board_names(self) -> "SearchConfig":
         selected_sources = {source.casefold() for source in self.sources}
         requirements = {
-            JobSource.GREENHOUSE.value: (self.greenhouse_boards, "greenhouse_boards"),
-            JobSource.LEVER.value: (self.lever_companies, "lever_companies"),
-            JobSource.ASHBY.value: (self.ashby_organizations, "ashby_organizations"),
+            JobSource.GREENHOUSE.value: (
+                self.greenhouse_boards,
+                "greenhouse_boards",
+                "boards",
+            ),
+            JobSource.LEVER.value: (
+                self.lever_companies,
+                "lever_companies",
+                "companies",
+            ),
+            JobSource.ASHBY.value: (
+                self.ashby_organizations,
+                "ashby_organizations",
+                "organizations",
+            ),
         }
-        for source, (values, field_name) in requirements.items():
-            if source.casefold() in selected_sources and not values:
+        for source, (legacy_values, field_name, option_key) in requirements.items():
+            generic_values = self.options_for(source).get(option_key)
+            has_generic_values = isinstance(generic_values, list) and bool(
+                _unique_non_empty(generic_values)
+            )
+            if (
+                source.casefold() in selected_sources
+                and not legacy_values
+                and not has_generic_values
+            ):
                 raise ValueError(f"{field_name} is required when {source} is selected")
         return self
 

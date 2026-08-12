@@ -24,9 +24,9 @@ Remember their could be more of these job platforms added from where we could sc
   - [x] Create the Remotive adapter
   - [x] Create the Arbeitnow adapter
   - [x] Create the Remote OK adapter
-  - [ ] Create the Greenhouse adapter
-  - [ ] Create the Lever adapter
-  - [ ] Create the Ashby adapter
+  - [x] Create the Greenhouse adapter
+  - [x] Create the Lever adapter
+  - [x] Create the Ashby adapter
   - [ ] Create the HiringCafe adapter
   - [ ] Route the application through the registry and remove legacy scraper functions
 - [x] Add a scraper registry so the UI can enable sources by name
