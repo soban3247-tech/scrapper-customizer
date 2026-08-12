@@ -53,4 +53,3 @@ def test_remotive_rejects_unexpected_response_shape() -> None:
 
     with pytest.raises(ScraperResponseError, match="jobs list"):
         scraper.search(SearchConfig(query="Python", sources=["Remotive"]))
-

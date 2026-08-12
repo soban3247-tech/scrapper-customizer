@@ -91,4 +91,3 @@ def _first_identifier(*values: Any) -> str | None:
         if value not in (None, ""):
             return str(value)
     return None
-

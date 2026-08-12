@@ -56,4 +56,3 @@ def request_json(
         return response.json()
     except (requests.exceptions.JSONDecodeError, ValueError) as exc:
         raise ScraperResponseError(f"Invalid JSON from {url}") from exc
-

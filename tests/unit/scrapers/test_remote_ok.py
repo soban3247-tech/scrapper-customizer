@@ -64,4 +64,3 @@ def test_remote_ok_network_failure_is_isolated_by_registry() -> None:
     assert result.issues[0].code == "request_error"
     assert result.issues[0].retryable is True
     assert "fallback unavailable" not in result.issues[0].message
-

@@ -71,4 +71,3 @@ class RemotiveScraper:
 
 def _optional_string(value: Any) -> str | None:
     return None if value in (None, "") else str(value)
-

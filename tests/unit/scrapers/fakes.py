@@ -27,4 +27,3 @@ class FakeSession:
         if isinstance(response, Exception):
             raise response
         return response
-

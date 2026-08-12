@@ -70,4 +70,3 @@ def test_arbeitnow_rejects_unexpected_response_shape() -> None:
 
     with pytest.raises(ScraperResponseError, match="data list"):
         scraper.search(SearchConfig(query="Python", sources=["Arbeitnow"]))
-

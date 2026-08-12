@@ -20,4 +20,3 @@ def test_invalid_json_is_reported_as_response_error() -> None:
 
     with pytest.raises(ScraperResponseError, match="Invalid JSON"):
         request_json(session, "https://example.com/jobs")
-
