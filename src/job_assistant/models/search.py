@@ -22,11 +22,13 @@ class JobSource(StrEnum):
 
 
 DEFAULT_SOURCES = [
-    JobSource.HIRINGCAFE,
-    JobSource.REMOTIVE,
-    JobSource.ARBEITNOW,
-    JobSource.REMOTE_OK,
+    JobSource.HIRINGCAFE.value,
+    JobSource.REMOTIVE.value,
+    JobSource.ARBEITNOW.value,
+    JobSource.REMOTE_OK.value,
 ]
+
+SourceOptionValue = str | int | float | bool | list[str]
 
 
 class SearchConfig(BaseModel):
@@ -44,9 +46,12 @@ class SearchConfig(BaseModel):
     remote_only: bool = False
     posted_after: date | None = None
     max_pages: int = Field(default=1, ge=1, le=25)
-    sources: list[JobSource] = Field(
+    sources: list[str] = Field(
         default_factory=lambda: list(DEFAULT_SOURCES),
         min_length=1,
+    )
+    source_options: dict[str, dict[str, SourceOptionValue]] = Field(
+        default_factory=dict
     )
     greenhouse_boards: list[str] = Field(default_factory=list)
     lever_companies: list[str] = Field(default_factory=list)
@@ -64,18 +69,28 @@ class SearchConfig(BaseModel):
 
     @field_validator("sources")
     @classmethod
-    def remove_duplicate_sources(cls, values: list[JobSource]) -> list[JobSource]:
-        return list(dict.fromkeys(values))
+    def clean_sources(cls, values: list[str]) -> list[str]:
+        return _unique_non_empty(values)
 
     @model_validator(mode="after")
     def require_selected_board_names(self) -> "SearchConfig":
+        selected_sources = {source.casefold() for source in self.sources}
         requirements = {
-            JobSource.GREENHOUSE: (self.greenhouse_boards, "greenhouse_boards"),
-            JobSource.LEVER: (self.lever_companies, "lever_companies"),
-            JobSource.ASHBY: (self.ashby_organizations, "ashby_organizations"),
+            JobSource.GREENHOUSE.value: (self.greenhouse_boards, "greenhouse_boards"),
+            JobSource.LEVER.value: (self.lever_companies, "lever_companies"),
+            JobSource.ASHBY.value: (self.ashby_organizations, "ashby_organizations"),
         }
         for source, (values, field_name) in requirements.items():
-            if source in self.sources and not values:
-                raise ValueError(f"{field_name} is required when {source.value} is selected")
+            if source.casefold() in selected_sources and not values:
+                raise ValueError(f"{field_name} is required when {source} is selected")
         return self
+
+    def options_for(self, source_id: str) -> dict[str, SourceOptionValue]:
+        """Return generic adapter settings without hard-coding future platforms."""
+
+        requested_key = source_id.strip().casefold()
+        for configured_source, options in self.source_options.items():
+            if configured_source.strip().casefold() == requested_key:
+                return options
+        return {}
 
