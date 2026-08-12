@@ -21,6 +21,14 @@ tested.
 - [x] Define one common interface for all scraper modules, if any of these are not compatible with the others in terms of interface the interface should be handled in such a way that each of them may have their own interface so they could be switched through UI on runtime on the click of button.
 Remember their could be more of these job platforms added from where we could scrape links, so key it the way so that more could be added later without causing errors.
 - [ ] Move each scraper from `UI.py` into its own file
+  - [x] Create the Remotive adapter
+  - [x] Create the Arbeitnow adapter
+  - [x] Create the Remote OK adapter
+  - [ ] Create the Greenhouse adapter
+  - [ ] Create the Lever adapter
+  - [ ] Create the Ashby adapter
+  - [ ] Create the HiringCafe adapter
+  - [ ] Route the application through the registry and remove legacy scraper functions
 - [x] Add a scraper registry so the UI can enable sources by name
 - [ ] Keep HiringCafe, Remotive, Arbeitnow, Remote OK, Greenhouse, Lever, and Ashby
 - [ ] Keep LinkedIn as an optional adapter for approved user credentials
