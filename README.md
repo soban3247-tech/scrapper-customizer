@@ -1,24 +1,36 @@
 # Job Scraper and CV Customizer
 
 A Python application that finds relevant jobs, ranks them against a user's CV,
-and helps tailor the CV for a selected role. See [ARCHITECTURE.md](ARCHITECTURE.md)
-for the proposed workflow and module design.
+and helps tailor the CV for a selected role. The MVP uses explainable matching
+rules and must never add experience, education, or skills that are absent from
+the original CV.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the workflow and module design, and
+[PLAN.md](PLAN.md) for the implementation checklist.
 
 ## Prerequisites
 
 - Git
 - Windows 10 or newer
-- Internet access for job sources and package installation
+- Internet access for package installation and job sources
 
-Python does not need to be installed manually because `uv` can install it.
+Python does not need to be installed manually because `uv` can install and
+manage the required version.
 
-## Setup with uv
+## First-time setup with uv
 
 ### 1. Clone the repository
 
 ```powershell
+cd D:\SaaS
 git clone https://github.com/soban3247-tech/scrapper-customizer.git
 cd scrapper-customizer
+```
+
+To work from the current planning branch:
+
+```powershell
+git switch agent/project-planning
 ```
 
 ### 2. Install uv
@@ -27,9 +39,9 @@ cd scrapper-customizer
 winget install --id astral-sh.uv -e
 ```
 
-Restart the terminal if the `uv` command is not immediately available.
+Restart PowerShell if `uv` is not immediately available.
 
-### 3. Create the environment and install packages
+### 3. Install Python and the required packages
 
 ```powershell
 uv python install 3.11
@@ -37,46 +49,104 @@ uv venv --python 3.11
 uv pip install -r requirements.txt
 ```
 
-`uv` automatically uses the `.venv` directory, so activation is optional. To
-activate it manually in PowerShell:
+Activation is optional when commands are prefixed with `uv run`. To activate the
+environment manually in PowerShell:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### 4. Install the optional browser
+### 4. Create the local configuration
 
-This is only needed for scraper modules that use Playwright:
+```powershell
+Copy-Item .env.example .env
+```
+
+The core scraper does not require an AI key. Add credentials to `.env` only when
+you intentionally enable an optional integration. The `.env` file is ignored by
+Git.
+
+### 5. Install the optional browser
+
+This is needed only by scraper modules that use Playwright:
 
 ```powershell
 uv run playwright install chromium
 ```
 
-## Run the Current Application
+### 6. Install optional AI packages
+
+The MVP's scraping and basic ranking work without these packages. Install them
+only when developing AI-assisted profile extraction or CV customization:
+
+```powershell
+uv pip install -r requirements-ai.txt
+```
+
+## Run the application
+
+The current application uses Tkinter:
 
 ```powershell
 uv run python UI.py
 ```
 
-The current application uses Tkinter, which is included with the Windows Python
-installation. After the planned Streamlit interface is added, it will run with:
+After the planned Streamlit interface is implemented, run it with:
 
 ```powershell
 uv run streamlit run app.py
 ```
 
-## Run Tests
+## Run tests
 
 ```powershell
 uv run pytest
 ```
 
-## Updating Dependencies
+## Project layout
 
-Add or change a package in `requirements.txt`, then run:
+```text
+src/job_assistant/   Core models and business logic
+ui/                  Streamlit screens and session-state helpers
+tests/unit/          Fast tests for individual functions and classes
+tests/integration/   Tests for workflows across multiple modules
+tests/fixtures/      Synthetic and anonymized test inputs only
+templates/           Version-controlled DOCX templates
+data/                Local SQLite data (contents ignored by Git)
+uploads/             Private user CVs (contents ignored by Git)
+outputs/             Generated CVs and exports (contents ignored by Git)
+```
+
+## Everyday Git workflow
+
+Start a branch for one focused piece of work:
+
+```powershell
+git switch agent/project-planning
+git pull
+git switch -c feature/project-foundation
+```
+
+Review and save your changes:
+
+```powershell
+git status
+git diff
+git add README.md PLAN.md .gitignore .env.example
+git commit -m "chore: complete project foundation"
+git push -u origin feature/project-foundation
+```
+
+Then open GitHub and create a pull request from the feature branch into
+`agent/project-planning`. Do not commit `.venv`, `.env`, real CVs, databases,
+generated CVs, or API credentials.
+
+## Updating dependencies
+
+After changing a dependency file, synchronize the environment:
 
 ```powershell
 uv pip install -r requirements.txt
 ```
 
-Do not commit the `.venv` directory or private API keys.
+For optional AI development, use `requirements-ai.txt` instead.

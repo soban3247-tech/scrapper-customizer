@@ -43,17 +43,27 @@ work without an AI service.
 ## Module Structure
 
 ```text
-app.py                    Application entry point
-ui/                       Upload, search, results, and CV review screens
-models/                   Shared Profile and Job data models
-resume/                   CV reading and profile extraction
-scrapers/                 One file for each job source
-matching/                 Filtering, scoring, and score explanations
-storage/                  SQLite storage and CSV export
-customizer/               CV tailoring and template rendering
-templates/                Prebuilt DOCX templates / HTML templates
-tests/                    Tests for each module
+app.py                              Streamlit application entry point
+ui/                                 Upload, search, results, and CV review screens
+src/job_assistant/
+    models/                         Shared Profile and Job data models
+    resume/                         CV reading and profile extraction
+    scrapers/                       One adapter for each job source
+    matching/                       Filtering, scoring, and explanations
+    storage/                        SQLite storage and CSV export
+    customizer/                     CV tailoring and template rendering
+templates/                          Version-controlled DOCX templates
+tests/unit/                         Tests for individual modules
+tests/integration/                  Tests for connected workflows
+tests/fixtures/                     Synthetic and anonymized test data
+data/                               Local application database
+uploads/                            Private CV uploads
+outputs/                            Generated CVs and result exports
 ```
+
+The contents of `data/`, `uploads/`, and `outputs/` are local-only and excluded
+from version control. This prevents private CVs, generated documents, and
+database records from being uploaded to GitHub.
 
 Every scraper returns the same `Job` model. Other modules work with that model
 instead of depending directly on individual scrapers. This makes each source easy

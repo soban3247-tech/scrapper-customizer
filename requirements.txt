@@ -20,10 +20,5 @@ docxtpl>=0.19
 # Job matching and ranking
 scikit-learn>=1.6
 
-# Optional AI workflow and model integration
-langchain>=1.0
-langgraph>=1.0
-langchain-openai>=1.0
-
 # Testing
 pytest>=8.3
