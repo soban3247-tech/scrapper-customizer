@@ -3,7 +3,7 @@
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 
 from job_assistant.models import Job, SearchConfig
 
@@ -74,7 +74,6 @@ class ScrapeResult(BaseModel):
     jobs: list[Job] = Field(default_factory=list)
     issues: list[ScraperIssue] = Field(default_factory=list)
 
-    @computed_field
     @property
     def succeeded(self) -> bool:
         return not any(issue.fatal for issue in self.issues)
@@ -113,4 +112,3 @@ class JobScraper(Protocol):
     def search(self, config: SearchConfig) -> ScrapeResult:
         """Search one platform and return normalized jobs plus any issues."""
         ...
-

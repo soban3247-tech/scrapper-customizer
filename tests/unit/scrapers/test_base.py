@@ -79,3 +79,11 @@ def test_failure_result_is_structured_and_fatal() -> None:
     assert result.succeeded is False
     assert result.issues[0].retryable is True
 
+
+def test_result_can_round_trip_through_serialized_session_data() -> None:
+    original = ScrapeResult(source_id="future-board")
+
+    restored = ScrapeResult.model_validate(original.model_dump())
+
+    assert restored == original
+    assert restored.succeeded is True
