@@ -52,11 +52,19 @@ def text_matches_query(query: str, *values: Any) -> bool:
 
 
 def string_list(value: Any) -> list[str]:
-    """Return clean strings from source fields that should contain a list."""
+    """Return clean, case-insensitively unique strings from a list field."""
 
     if not isinstance(value, list):
         return []
-    return [str(item).strip() for item in value if str(item).strip()]
+    result: list[str] = []
+    seen: set[str] = set()
+    for item in value:
+        cleaned = str(item).strip()
+        key = cleaned.casefold()
+        if cleaned and key not in seen:
+            seen.add(key)
+            result.append(cleaned)
+    return result
 
 
 def optional_decimal(value: Any) -> Decimal | None:

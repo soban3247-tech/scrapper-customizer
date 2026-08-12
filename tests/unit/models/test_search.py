@@ -58,6 +58,26 @@ def test_board_source_accepts_board_names() -> None:
     assert config.greenhouse_boards == ["openai"]
 
 
+@pytest.mark.parametrize(
+    ("source", "option_key"),
+    [
+        (JobSource.GREENHOUSE, "boards"),
+        (JobSource.LEVER, "companies"),
+        (JobSource.ASHBY, "organizations"),
+    ],
+)
+def test_board_source_accepts_generic_ui_configuration(
+    source: JobSource, option_key: str
+) -> None:
+    config = SearchConfig(
+        query="developer",
+        sources=[source],
+        source_options={source.value: {option_key: ["example"]}},
+    )
+
+    assert config.options_for(source.value)[option_key] == ["example"]
+
+
 @pytest.mark.parametrize("max_pages", [0, 26])
 def test_search_config_rejects_unsafe_page_limits(max_pages: int) -> None:
     with pytest.raises(ValidationError):
