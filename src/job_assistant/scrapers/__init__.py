@@ -1,5 +1,6 @@
 """Common contracts, errors, and registry for job-source adapters."""
 
+from .arbeitnow import ArbeitnowScraper
 from .base import (
     ConfigFieldKind,
     JobScraper,
@@ -18,11 +19,16 @@ from .errors import (
     ScraperRequestError,
     ScraperResponseError,
 )
+from .remotive import RemotiveScraper
+from .remote_ok import RemoteOkScraper
 from .registry import ScraperRegistry
 
 __all__ = [
+    "ArbeitnowScraper",
     "ConfigFieldKind",
     "JobScraper",
+    "RemotiveScraper",
+    "RemoteOkScraper",
     "ScrapeResult",
     "ScraperCapabilities",
     "ScraperConfigField",
