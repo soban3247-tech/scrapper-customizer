@@ -45,7 +45,7 @@ Remember their could be more of these job platforms added from where we could sc
 - [x] Start with a local skill dictionary and explainable matching rules
 - [x] Show the extracted profile in an editable form
 - [x] Validate the corrected profile with Pydantic
-- [ ] Save the profile in SQLite for later sessions
+- [x] Save the profile in SQLite for later sessions
 - [ ] Add parser and extraction tests using sample CVs
 
 **Outcome:** The user can upload a CV and confirm an accurate profile.
