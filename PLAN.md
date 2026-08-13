@@ -43,8 +43,8 @@ Remember their could be more of these job platforms added from where we could sc
 - [x] Read text from DOCX CVs with python-docx
 - [x] Extract skills, job titles, experience, education, and likely domain
 - [x] Start with a local skill dictionary and explainable matching rules
-- [ ] Show the extracted profile in an editable form
-- [ ] Validate the corrected profile with Pydantic
+- [x] Show the extracted profile in an editable form
+- [x] Validate the corrected profile with Pydantic
 - [ ] Save the profile in SQLite for later sessions
 - [ ] Add parser and extraction tests using sample CVs
 
