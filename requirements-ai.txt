@@ -1,0 +1,7 @@
+# Install this file only when AI-assisted features are required.
+-r requirements.txt
+
+langchain>=1.0
+langgraph>=1.0
+langchain-openai>=1.0
+
