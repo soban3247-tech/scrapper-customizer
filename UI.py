@@ -1,24 +1,30 @@
 from __future__ import annotations
 
-import json
 import queue
-import random
 import re
 import sys
 import threading
-import time
 import tkinter as tk
 import webbrowser
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from typing import Any, Callable
+from typing import Callable
 
 import pandas as pd
-import requests
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
-BASE_URL = "https://hiringcafe.com"
+from job_assistant.models import Job, SearchConfig
+from job_assistant.scrapers import (
+    ScraperError,
+    create_default_registry,
+    deduplicate_jobs,
+    filter_jobs_by_date,
+)
 
 OTHER_JOB_PLATFORM_WEBPAGES = {
     "Remotive": "https://remotive.com/remote-jobs",
@@ -26,8 +32,6 @@ OTHER_JOB_PLATFORM_WEBPAGES = {
     "Greenhouse job boards": "https://boards.greenhouse.io",
     "Lever job boards": "https://jobs.lever.co",
     "Ashby job boards": "https://jobs.ashbyhq.com",
-    "Workable jobs": "https://jobs.workable.com",
-    "Wellfound": "https://wellfound.com/jobs",
     "Remote OK": "https://remoteok.com",
 }
 
@@ -41,530 +45,26 @@ SOURCE_LABELS = {
     "ashby": "Ashby",
 }
 
-NEXT_DATA_RE = re.compile(
-    r'<script[^>]*id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>',
-    re.DOTALL | re.IGNORECASE,
-)
-
 LogFn = Callable[[str], None]
-
-
-class ScraperError(Exception):
-    pass
 
 
 def parse_user_date(value: str) -> date:
     """Parse a YYYY-MM-DD date entered by the user."""
+
     try:
         parsed = datetime.strptime(value.strip(), "%Y-%m-%d").date()
     except ValueError as exc:
         raise ValueError(
             "Date must use YYYY-MM-DD format, for example 2026-07-01."
         ) from exc
-
-    today = datetime.now().date()
-    if parsed > today:
+    if parsed > date.today():
         raise ValueError("Start date cannot be later than today.")
     return parsed
 
 
-def parse_job_date(value: Any) -> date | None:
-    """Convert common HiringCafe date formats to a date."""
-    if value in (None, "", [], {}):
-        return None
-
-    if isinstance(value, (int, float)):
-        timestamp = float(value)
-        if timestamp > 10_000_000_000:
-            timestamp /= 1000
-        try:
-            return datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
-        except (ValueError, OSError, OverflowError):
-            return None
-
-    text = str(value).strip()
-    if not text:
-        return None
-
-    if text.isdigit():
-        return parse_job_date(int(text))
-
-    normalized = text.replace("Z", "+00:00")
-    try:
-        return datetime.fromisoformat(normalized).date()
-    except ValueError:
-        pass
-
-    for fmt in (
-        "%Y-%m-%d",
-        "%Y/%m/%d",
-        "%m/%d/%Y",
-        "%d/%m/%Y",
-        "%b %d, %Y",
-        "%B %d, %Y",
-    ):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except ValueError:
-            continue
-
-    return None
-
-
-def get_job_posted_date(job: dict[str, Any]) -> date | None:
-    """Find the posted/published date across known HiringCafe schemas."""
-    info = job.get("job_information") or {}
-    job_data = (
-        job.get("v5_processed_job_data")
-        or job.get("processed_job_data")
-        or job.get("job_data")
-        or {}
-    )
-
-    candidates = (
-        job_data.get("date_posted"),
-        job_data.get("posted_date"),
-        job_data.get("published_at"),
-        job_data.get("created_at"),
-        job_data.get("estimated_publish_date"),
-        info.get("date_posted"),
-        info.get("posted_date"),
-        info.get("published_at"),
-        job.get("date_posted"),
-        job.get("posted_date"),
-        job.get("published_at"),
-        job.get("created_at"),
-        job.get("createdAt"),
-        job.get("publication_date"),
-        job.get("publicationDate"),
-        job.get("first_seen_at"),
-        job.get("firstSeenAt"),
-    )
-
-    for candidate in candidates:
-        parsed = parse_job_date(candidate)
-        if parsed is not None:
-            return parsed
-    return None
-
-
-def filter_jobs_by_date(
-    jobs: list[dict[str, Any]],
-    start_date: date,
-) -> tuple[list[dict[str, Any]], int]:
-    """Keep jobs posted from start_date through today, inclusive."""
-    today = datetime.now().date()
-    filtered: list[dict[str, Any]] = []
-    missing_date_count = 0
-
-    for job in jobs:
-        posted_date = get_job_posted_date(job)
-        if posted_date is None:
-            missing_date_count += 1
-            continue
-        if start_date <= posted_date <= today:
-            job["_parsed_posted_date"] = posted_date.isoformat()
-            filtered.append(job)
-
-    return filtered, missing_date_count
-
-
-def create_session() -> requests.Session:
-    session = requests.Session()
-
-    session.headers.update(
-        {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/131.0.0.0 Safari/537.36"
-            ),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-        }
-    )
-
-    return session
-
-
-def get_response(
-    session: requests.Session,
-    url: str,
-    *,
-    accept: str,
-    retries: int = 4,
-    log: LogFn | None = None,
-) -> requests.Response:
-    last_error: Exception | None = None
-
-    for attempt in range(retries):
-        try:
-            response = session.get(
-                url,
-                headers={
-                    "Accept": accept,
-                    "Referer": f"{BASE_URL}/",
-                },
-                timeout=30,
-                allow_redirects=True,
-            )
-
-            if response.status_code in {429, 500, 502, 503, 504}:
-                if attempt < retries - 1:
-                    delay = (2**attempt) + random.uniform(0.5, 1.5)
-                    if log:
-                        log(
-                            f"HTTP {response.status_code}. "
-                            f"Retrying in {delay:.1f} seconds..."
-                        )
-                    time.sleep(delay)
-                    continue
-
-            return response
-
-        except requests.RequestException as exc:
-            last_error = exc
-
-            if attempt < retries - 1:
-                delay = (2**attempt) + random.uniform(0.5, 1.5)
-                if log:
-                    log(f"Connection failed. Retrying in {delay:.1f} seconds...")
-                time.sleep(delay)
-
-    raise ScraperError(f"Request failed after {retries} attempts: {last_error}")
-
-
-def get_build_id(session: requests.Session, log: LogFn | None = None) -> str:
-    response = get_response(
-        session,
-        BASE_URL,
-        accept="text/html,application/xhtml+xml",
-        log=log,
-    )
-
-    if response.status_code != 200:
-        raise ScraperError(
-            f"Could not open HiringCafe homepage. HTTP status: {response.status_code}"
-        )
-
-    match = NEXT_DATA_RE.search(response.text)
-
-    if match:
-        try:
-            next_data = json.loads(match.group(1))
-            build_id = next_data.get("buildId")
-
-            if build_id:
-                return str(build_id)
-
-        except json.JSONDecodeError:
-            pass
-
-    build_match = re.search(
-        r'"buildId"\s*:\s*"([^"]+)"',
-        response.text,
-    )
-
-    if build_match:
-        return build_match.group(1)
-
-    page_preview = response.text[:500].replace("\n", " ")
-
-    raise ScraperError(
-        "Could not find HiringCafe's Next.js build ID.\n"
-        "The homepage may be returning a bot-protection page.\n\n"
-        f"Response preview:\n{page_preview}"
-    )
-
-
-def build_search_state(query: str) -> dict[str, Any]:
-    return {
-        "locations": [
-            {
-                "id": "FxY1yZQBoEtHp_8UEq7V",
-                "types": ["country"],
-                "formatted_address": "United States",
-                "address_components": [
-                    {
-                        "long_name": "United States",
-                        "short_name": "US",
-                        "types": ["country"],
-                    }
-                ],
-                "workplace_types": ["Remote"],
-                "options": {
-                    "flexible_regions": [
-                        "anywhere_in_country",
-                        "anywhere_in_continent",
-                        "anywhere_in_world",
-                    ]
-                },
-            }
-        ],
-        "workplaceTypes": ["Remote"],
-        "defaultToUserLocation": False,
-        "userLocation": None,
-        "searchQuery": query.strip(),
-        "sortBy": "default",
-    }
-
-
-def parse_json_response(
-    response: requests.Response,
-    page_number: int,
-) -> dict[str, Any]:
-    content_type = response.headers.get("Content-Type", "").lower()
-    body = response.text.strip()
-
-    if response.status_code != 200:
-        preview = body[:500].replace("\n", " ")
-
-        raise ScraperError(
-            f"HiringCafe returned HTTP {response.status_code} on page {page_number}.\n"
-            f"Final URL: {response.url}\n"
-            f"Response preview: {preview}"
-        )
-
-    if not body:
-        raise ScraperError(f"HiringCafe returned an empty response on page {page_number}.")
-
-    if "json" not in content_type:
-        preview = body[:500].replace("\n", " ")
-
-        raise ScraperError(
-            "HiringCafe returned HTML instead of JSON.\n"
-            f"Page: {page_number}\n"
-            f"Final URL: {response.url}\n"
-            f"Content-Type: {content_type or 'missing'}\n\n"
-            f"Response preview:\n{preview}"
-        )
-
-    try:
-        payload = response.json()
-
-    except requests.exceptions.JSONDecodeError as exc:
-        preview = body[:500].replace("\n", " ")
-
-        raise ScraperError(
-            "HiringCafe returned invalid JSON.\n"
-            f"Page: {page_number}\n"
-            f"Final URL: {response.url}\n"
-            f"Content-Type: {content_type}\n\n"
-            f"Response preview:\n{preview}"
-        ) from exc
-
-    if not isinstance(payload, dict):
-        raise ScraperError("HiringCafe returned an unexpected JSON structure.")
-
-    return payload
-
-
-def fetch_page(
-    session: requests.Session,
-    build_id: str,
-    search_state: dict[str, Any],
-    page: int,
-    log: LogFn | None = None,
-) -> tuple[dict[str, Any], str]:
-    url = f"{BASE_URL}/_next/data/{build_id}/index.json"
-
-    response = session.get(
-        url,
-        params={
-            "searchState": json.dumps(search_state, separators=(",", ":")),
-            "page": page,
-        },
-        headers={
-            "Accept": "application/json,text/plain,*/*",
-            "Referer": f"{BASE_URL}/",
-            "x-nextjs-data": "1",
-        },
-        timeout=30,
-        allow_redirects=True,
-    )
-
-    if response.status_code in {404, 410}:
-        if log:
-            log("Build ID expired. Getting the latest build ID...")
-
-        build_id = get_build_id(session, log=log)
-        url = f"{BASE_URL}/_next/data/{build_id}/index.json"
-
-        response = session.get(
-            url,
-            params={
-                "searchState": json.dumps(search_state, separators=(",", ":")),
-                "page": page,
-            },
-            headers={
-                "Accept": "application/json,text/plain,*/*",
-                "Referer": f"{BASE_URL}/",
-                "x-nextjs-data": "1",
-            },
-            timeout=30,
-            allow_redirects=True,
-        )
-
-    payload = parse_json_response(response, page_number=page + 1)
-
-    page_props = payload.get("pageProps")
-
-    if not isinstance(page_props, dict):
-        raise ScraperError(
-            "The JSON response did not contain pageProps.\n"
-            f"Available keys: {list(payload.keys())}"
-        )
-
-    return page_props, build_id
-
-
-def scrape_jobs(
-    query: str,
-    max_pages: int = 5,
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    session = create_session()
-
-    if log:
-        log("Opening HiringCafe...")
-    build_id = get_build_id(session, log=log)
-
-    if log:
-        log(f"Build ID: {build_id}")
-
-    search_state = build_search_state(query)
-
-    all_jobs: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
-
-    for page in range(max_pages):
-        if log:
-            log(f"Fetching page {page + 1}...")
-
-        page_props, build_id = fetch_page(
-            session,
-            build_id,
-            search_state,
-            page,
-            log=log,
-        )
-
-        results = page_props.get("ssrHits")
-
-        if results is None:
-            results = page_props.get("results")
-
-        if not isinstance(results, list):
-            raise ScraperError(
-                "No recognized jobs list was found.\n"
-                f"Available pageProps keys: {list(page_props.keys())}"
-            )
-
-        if not results:
-            if log:
-                log("No more jobs found.")
-            break
-
-        added = 0
-
-        for job in results:
-            if not isinstance(job, dict):
-                continue
-
-            unique_id = str(
-                job.get("objectID")
-                or job.get("id")
-                or job.get("apply_url")
-                or json.dumps(job, sort_keys=True, default=str)
-            )
-
-            if unique_id in seen_ids:
-                continue
-
-            seen_ids.add(unique_id)
-            all_jobs.append(job)
-            added += 1
-
-        if log:
-            log(f"Page {page + 1}: {len(results)} received, {added} added.")
-
-        is_last_page = page_props.get("ssrIsLastPage")
-
-        if is_last_page is True:
-            break
-
-        time.sleep(random.uniform(1.0, 1.8))
-
-    return all_jobs
-
-
-def request_json(
-    session: requests.Session,
-    url: str,
-    *,
-    params: dict[str, Any] | None = None,
-    log: LogFn | None = None,
-) -> Any:
-    try:
-        response = session.get(
-            url,
-            params=params,
-            headers={
-                "Accept": "application/json,text/plain,*/*",
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/131.0.0.0 Safari/537.36"
-                ),
-            },
-            timeout=30,
-            allow_redirects=True,
-        )
-    except requests.RequestException as exc:
-        details = str(exc)
-        if "NameResolutionError" in details or "getaddrinfo failed" in details:
-            raise ScraperError(
-                "DNS lookup failed, so this computer could not find the API server.\n"
-                f"URL: {url}\n\n"
-                "This is a network/DNS issue, not a company-name issue. Try opening "
-                "the source website in a browser, changing DNS to 1.1.1.1 or 8.8.8.8, "
-                "turning off VPN/proxy temporarily, or running: ipconfig /flushdns"
-            ) from exc
-        raise ScraperError(f"Request failed for {url}: {exc}") from exc
-
-    if response.status_code != 200:
-        preview = response.text[:300].replace("\n", " ")
-        raise ScraperError(
-            f"HTTP {response.status_code} from {url}. Response preview: {preview}"
-        )
-
-    try:
-        return response.json()
-    except requests.exceptions.JSONDecodeError as exc:
-        preview = response.text[:300].replace("\n", " ")
-        raise ScraperError(
-            f"Invalid JSON from {url}. Response preview: {preview}"
-        ) from exc
-
-
-def text_matches_query(query: str, *values: Any) -> bool:
-    words = [word for word in re.split(r"\s+", query.lower().strip()) if word]
-    if not words:
-        return True
-
-    haystack = " ".join(
-        json.dumps(value, default=str).lower()
-        if isinstance(value, (dict, list))
-        else str(value).lower()
-        for value in values
-        if value not in (None, "", [], {})
-    )
-
-    return all(word in haystack for word in words)
-
-
 def split_board_names(value: str) -> list[str]:
+    """Split comma-, semicolon-, or newline-separated board identifiers."""
+
     return [
         item.strip().strip("/")
         for item in re.split(r"[\n,;]+", value)
@@ -572,603 +72,35 @@ def split_board_names(value: str) -> list[str]:
     ]
 
 
-def mark_platform(job: dict[str, Any], platform: str) -> dict[str, Any]:
-    job["_platform"] = platform
-    return job
-
-
-def scrape_remotive_jobs(
-    query: str,
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    if log:
-        log("Fetching Remotive jobs...")
-
-    session = create_session()
-    payload = request_json(
-        session,
-        "https://remotive.com/api/remote-jobs",
-        params={"search": query},
-        log=log,
-    )
-
-    jobs = payload.get("jobs") if isinstance(payload, dict) else None
-    if not isinstance(jobs, list):
-        raise ScraperError("Remotive response did not contain a jobs list.")
-
-    results: list[dict[str, Any]] = []
-    for job in jobs:
-        if not isinstance(job, dict):
-            continue
-        results.append(
-            mark_platform(
-                {
-                    "posted_date": job.get("publication_date"),
-                    "title": job.get("title"),
-                    "company_name": job.get("company_name"),
-                    "location": job.get("candidate_required_location"),
-                    "workplace_type": "Remote",
-                    "commitment": job.get("job_type"),
-                    "salary_min": "",
-                    "salary_max": "",
-                    "apply_url": job.get("url"),
-                    "source": "Remotive",
-                    "id": job.get("id"),
-                    "description": job.get("description"),
-                    "tags": job.get("tags"),
-                },
-                "Remotive",
-            )
-        )
-
-    if log:
-        log(f"Remotive returned {len(results)} jobs.")
-    return results
-
-
-def scrape_arbeitnow_jobs(
-    query: str,
-    max_pages: int,
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    if log:
-        log("Fetching Arbeitnow jobs...")
-
-    session = create_session()
-    results: list[dict[str, Any]] = []
-
-    for page in range(1, max_pages + 1):
-        payload = request_json(
-            session,
-            "https://www.arbeitnow.com/api/job-board-api",
-            params={"page": page},
-            log=log,
-        )
-        jobs = payload.get("data") if isinstance(payload, dict) else None
-        if not isinstance(jobs, list) or not jobs:
-            break
-
-        added = 0
-        for job in jobs:
-            if not isinstance(job, dict):
-                continue
-            if not text_matches_query(
-                query,
-                job.get("title"),
-                job.get("company_name"),
-                job.get("description"),
-                job.get("tags"),
-            ):
-                continue
-
-            results.append(
-                mark_platform(
-                    {
-                        "posted_date": job.get("created_at"),
-                        "title": job.get("title"),
-                        "company_name": job.get("company_name"),
-                        "location": job.get("location"),
-                        "workplace_type": "Remote" if job.get("remote") else "",
-                        "commitment": ", ".join(job.get("job_types") or []),
-                        "apply_url": job.get("url"),
-                        "source": "Arbeitnow",
-                        "id": job.get("slug") or job.get("id"),
-                        "description": job.get("description"),
-                        "tags": job.get("tags"),
-                    },
-                    "Arbeitnow",
-                )
-            )
-            added += 1
-
-        if log:
-            log(f"Arbeitnow page {page}: {len(jobs)} received, {added} matched.")
-
-        links = payload.get("links") if isinstance(payload, dict) else {}
-        if not isinstance(links, dict) or not links.get("next"):
-            break
-
-    if log:
-        log(f"Arbeitnow matched {len(results)} jobs.")
-    return results
-
-
-def scrape_remoteok_jobs(
-    query: str,
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    if log:
-        log("Fetching Remote OK jobs...")
-
-    session = create_session()
-    last_error: Exception | None = None
-    payload: Any = None
-
-    for url in ("https://remoteok.com/api", "https://www.remoteok.com/api"):
-        try:
-            payload = request_json(session, url, log=log)
-            break
-        except (ScraperError, requests.RequestException) as exc:
-            last_error = exc
-
-    if payload is None:
-        raise ScraperError(f"Remote OK could not be reached: {last_error}")
-
-    if not isinstance(payload, list):
-        raise ScraperError("Remote OK response was not a list.")
-
-    results: list[dict[str, Any]] = []
-    for job in payload:
-        if not isinstance(job, dict) or "legal" in job:
-            continue
-        if not text_matches_query(
-            query,
-            job.get("position"),
-            job.get("company"),
-            job.get("description"),
-            job.get("tags"),
-        ):
-            continue
-
-        results.append(
-            mark_platform(
-                {
-                    "posted_date": job.get("date"),
-                    "title": job.get("position"),
-                    "company_name": job.get("company"),
-                    "location": job.get("location"),
-                    "workplace_type": "Remote",
-                    "commitment": "",
-                    "salary_min": job.get("salary_min"),
-                    "salary_max": job.get("salary_max"),
-                    "apply_url": job.get("url"),
-                    "source": "Remote OK",
-                    "id": job.get("id") or job.get("slug"),
-                    "description": job.get("description"),
-                    "tags": job.get("tags"),
-                },
-                "Remote OK",
-            )
-        )
-
-    if log:
-        log(f"Remote OK matched {len(results)} jobs.")
-    return results
-
-
-def scrape_greenhouse_jobs(
-    query: str,
-    board_names: list[str],
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    session = create_session()
-    results: list[dict[str, Any]] = []
-
-    for board in board_names:
-        if log:
-            log(f"Fetching Greenhouse board: {board}")
-
-        payload = request_json(
-            session,
-            f"https://boards-api.greenhouse.io/v1/boards/{board}/jobs",
-            params={"content": "true"},
-            log=log,
-        )
-        jobs = payload.get("jobs") if isinstance(payload, dict) else None
-        if not isinstance(jobs, list):
-            raise ScraperError(f"Greenhouse board {board} did not return jobs.")
-
-        added = 0
-        for job in jobs:
-            if not isinstance(job, dict):
-                continue
-            if not text_matches_query(
-                query,
-                job.get("title"),
-                job.get("content"),
-                job.get("departments"),
-                job.get("location"),
-            ):
-                continue
-
-            location = job.get("location") or {}
-            results.append(
-                mark_platform(
-                    {
-                        "posted_date": job.get("updated_at"),
-                        "title": job.get("title"),
-                        "company_name": board,
-                        "location": location.get("name")
-                        if isinstance(location, dict)
-                        else location,
-                        "workplace_type": "",
-                        "commitment": "",
-                        "apply_url": job.get("absolute_url"),
-                        "source": "Greenhouse",
-                        "id": job.get("id"),
-                        "description": job.get("content"),
-                    },
-                    "Greenhouse",
-                )
-            )
-            added += 1
-
-        if log:
-            log(f"Greenhouse {board}: {added} matched.")
-
-    return results
-
-
-def scrape_lever_jobs(
-    query: str,
-    company_names: list[str],
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    session = create_session()
-    results: list[dict[str, Any]] = []
-
-    for company in company_names:
-        if log:
-            log(f"Fetching Lever company: {company}")
-
-        payload = request_json(
-            session,
-            f"https://api.lever.co/v0/postings/{company}",
-            params={"mode": "json"},
-            log=log,
-        )
-        if not isinstance(payload, list):
-            raise ScraperError(f"Lever company {company} did not return a list.")
-
-        added = 0
-        for job in payload:
-            if not isinstance(job, dict):
-                continue
-            categories = job.get("categories") or {}
-            lists = job.get("lists") or []
-            if not text_matches_query(
-                query,
-                job.get("text"),
-                job.get("descriptionPlain"),
-                categories,
-                lists,
-            ):
-                continue
-
-            results.append(
-                mark_platform(
-                    {
-                        "posted_date": job.get("createdAt"),
-                        "title": job.get("text"),
-                        "company_name": company,
-                        "location": categories.get("location")
-                        if isinstance(categories, dict)
-                        else "",
-                        "workplace_type": "",
-                        "commitment": categories.get("commitment")
-                        if isinstance(categories, dict)
-                        else "",
-                        "apply_url": job.get("hostedUrl") or job.get("applyUrl"),
-                        "source": "Lever",
-                        "id": job.get("id"),
-                        "description": job.get("descriptionPlain"),
-                    },
-                    "Lever",
-                )
-            )
-            added += 1
-
-        if log:
-            log(f"Lever {company}: {added} matched.")
-
-    return results
-
-
-def scrape_ashby_jobs(
-    query: str,
-    organization_names: list[str],
-    log: LogFn | None = None,
-) -> list[dict[str, Any]]:
-    session = create_session()
-    results: list[dict[str, Any]] = []
-
-    for organization in organization_names:
-        if log:
-            log(f"Fetching Ashby organization: {organization}")
-
-        payload = request_json(
-            session,
-            f"https://api.ashbyhq.com/posting-api/job-board/{organization}",
-            params={"includeCompensation": "true"},
-            log=log,
-        )
-        jobs = payload.get("jobs") if isinstance(payload, dict) else None
-        if not isinstance(jobs, list):
-            raise ScraperError(f"Ashby organization {organization} did not return jobs.")
-
-        added = 0
-        for job in jobs:
-            if not isinstance(job, dict):
-                continue
-            if not text_matches_query(
-                query,
-                job.get("title"),
-                job.get("descriptionPlain"),
-                job.get("department"),
-                job.get("location"),
-            ):
-                continue
-
-            location = job.get("location") or {}
-            department = job.get("department") or {}
-            compensation = job.get("compensation") or {}
-            results.append(
-                mark_platform(
-                    {
-                        "posted_date": job.get("publishedAt")
-                        or job.get("createdAt")
-                        or job.get("updatedAt"),
-                        "title": job.get("title"),
-                        "company_name": organization,
-                        "location": location.get("name")
-                        if isinstance(location, dict)
-                        else location,
-                        "workplace_type": "",
-                        "commitment": department.get("name")
-                        if isinstance(department, dict)
-                        else "",
-                        "salary_min": compensation.get("minValue")
-                        if isinstance(compensation, dict)
-                        else "",
-                        "salary_max": compensation.get("maxValue")
-                        if isinstance(compensation, dict)
-                        else "",
-                        "apply_url": job.get("jobUrl") or job.get("applyUrl"),
-                        "source": "Ashby",
-                        "id": job.get("id"),
-                        "description": job.get("descriptionPlain"),
-                    },
-                    "Ashby",
-                )
-            )
-            added += 1
-
-        if log:
-            log(f"Ashby {organization}: {added} matched.")
-
-    return results
-
-
-def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    unique_jobs: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    for job in jobs:
-        key = str(
-            first_value(
-                job.get("apply_url"),
-                job.get("url"),
-                job.get("absolute_url"),
-                job.get("id"),
-                job.get("objectID"),
-                f"{job.get('title')}|{job.get('company_name') or job.get('company')}",
-            )
-        ).lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        unique_jobs.append(job)
-
-    return unique_jobs
-
-
-def scrape_selected_sources(
-    *,
-    query: str,
-    max_pages: int,
-    selected_sources: dict[str, bool],
-    greenhouse_boards: list[str],
-    lever_companies: list[str],
-    ashby_organizations: list[str],
-    log: LogFn,
-) -> list[dict[str, Any]]:
-    all_jobs: list[dict[str, Any]] = []
-
-    collectors: list[tuple[str, Callable[[], list[dict[str, Any]]]]] = []
-
-    if selected_sources.get("hiringcafe"):
-        collectors.append(
-            ("HiringCafe", lambda: [mark_platform(job, "HiringCafe") for job in scrape_jobs(query, max_pages, log)])
-        )
-    if selected_sources.get("remotive"):
-        collectors.append(("Remotive", lambda: scrape_remotive_jobs(query, log)))
-    if selected_sources.get("arbeitnow"):
-        collectors.append(("Arbeitnow", lambda: scrape_arbeitnow_jobs(query, max_pages, log)))
-    if selected_sources.get("remoteok"):
-        collectors.append(("Remote OK", lambda: scrape_remoteok_jobs(query, log)))
-    if selected_sources.get("greenhouse") and greenhouse_boards:
-        collectors.append(
-            ("Greenhouse", lambda: scrape_greenhouse_jobs(query, greenhouse_boards, log))
-        )
-    if selected_sources.get("lever") and lever_companies:
-        collectors.append(("Lever", lambda: scrape_lever_jobs(query, lever_companies, log)))
-    if selected_sources.get("ashby") and ashby_organizations:
-        collectors.append(
-            ("Ashby", lambda: scrape_ashby_jobs(query, ashby_organizations, log))
-        )
-
-    for source_name, collector in collectors:
-        try:
-            jobs = collector()
-            all_jobs.extend(jobs)
-            log(f"{source_name}: added {len(jobs)} jobs before date filtering.")
-        except ScraperError as exc:
-            log(f"{source_name} failed: {exc}")
-        except requests.RequestException as exc:
-            details = str(exc)
-            if "NameResolutionError" in details or "getaddrinfo failed" in details:
-                log(
-                    f"{source_name} failed: DNS lookup failed. Your computer could "
-                    "not find that source's API server. Try changing DNS to 1.1.1.1 "
-                    "or 8.8.8.8, turning off VPN/proxy temporarily, or running "
-                    "ipconfig /flushdns."
-                )
-            else:
-                log(f"{source_name} request failed: {exc}")
-
-    return deduplicate_jobs(all_jobs)
-
-
-def first_value(*values: Any) -> Any:
-    for value in values:
-        if value not in (None, "", [], {}):
-            return value
-
-    return ""
-
-
-def clean_jobs(
-    jobs: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    cleaned: list[dict[str, Any]] = []
-
-    for job in jobs:
-        info = job.get("job_information") or {}
-
-        job_data = (
-            job.get("v5_processed_job_data")
-            or job.get("processed_job_data")
-            or {}
-        )
-
-        company_data = (
-            job.get("v5_processed_company_data")
-            or job.get("processed_company_data")
-            or {}
-        )
-
-        commitment = first_value(
-            job_data.get("commitment"),
-            info.get("commitment"),
-        )
-
-        if isinstance(commitment, list):
-            commitment = ", ".join(str(item) for item in commitment)
-
-        parsed_posted_date = get_job_posted_date(job)
-
-        cleaned.append(
-            {
-                "platform": first_value(
-                    job.get("_platform"),
-                    job.get("platform"),
-                    job.get("source"),
-                ),
-                "posted_date": first_value(
-                    job.get("_parsed_posted_date"),
-                    parsed_posted_date.isoformat() if parsed_posted_date else "",
-                ),
-                "title": first_value(
-                    info.get("title"),
-                    job_data.get("title"),
-                    job.get("title"),
-                ),
-                "company": first_value(
-                    job_data.get("company_name"),
-                    company_data.get("name"),
-                    info.get("company"),
-                    job.get("company_name"),
-                    job.get("company"),
-                    job.get("board_token"),
-                ),
-                "location": first_value(
-                    job_data.get("formatted_workplace_location"),
-                    info.get("location"),
-                    job.get("location"),
-                ),
-                "workplace_type": first_value(
-                    job_data.get("workplace_type"),
-                    info.get("workplace_type"),
-                    job.get("workplace_type"),
-                ),
-                "commitment": first_value(commitment, job.get("commitment")),
-                "salary_min": first_value(
-                    job_data.get("yearly_min_compensation"),
-                    job.get("salary_min"),
-                ),
-                "salary_max": first_value(
-                    job_data.get("yearly_max_compensation"),
-                    job.get("salary_max"),
-                ),
-                "seniority": first_value(
-                    job_data.get("seniority_level"),
-                    job.get("seniority_level"),
-                ),
-                "apply_url": first_value(
-                    job.get("apply_url"),
-                    job.get("url"),
-                    info.get("apply_url"),
-                ),
-                "source": first_value(
-                    job.get("source"),
-                    job.get("apply_source"),
-                ),
-                "job_id": first_value(
-                    job.get("objectID"),
-                    job.get("id"),
-                ),
-            }
-        )
-
-    return cleaned
-
-
 def make_filename(query: str) -> str:
-    safe_query = re.sub(
-        r"[^a-zA-Z0-9]+",
-        "_",
-        query,
-    ).strip("_")
-
+    safe_query = re.sub(r"[^a-zA-Z0-9]+", "_", query).strip("_")
     return f"{safe_query.lower()}_jobs.xlsx"
 
 
-def export_to_excel(
-    jobs: list[dict[str, Any]],
-    filename: str | Path,
-) -> Path:
+def export_to_excel(jobs: list[Job], filename: str | Path) -> Path:
     output = Path(filename)
     output.parent.mkdir(parents=True, exist_ok=True)
-
-    dataframe = pd.DataFrame(jobs)
-
-    dataframe.to_excel(
-        output,
-        index=False,
-        engine="openpyxl",
-    )
-
+    dataframe = pd.DataFrame([_job_export_row(job) for job in jobs])
+    dataframe.to_excel(output, index=False, engine="openpyxl")
     return output.resolve()
+
+
+def _job_export_row(job: Job) -> dict[str, object]:
+    return {
+        "platform": job.source,
+        "posted_date": job.posted_date.isoformat() if job.posted_date else "",
+        "title": job.title,
+        "company": job.company,
+        "location": job.location or "",
+        "workplace_type": job.workplace_type or "",
+        "commitment": job.commitment or "",
+        "salary_min": job.salary_min if job.salary_min is not None else "",
+        "salary_max": job.salary_max if job.salary_max is not None else "",
+        "seniority": "",
+        "apply_url": str(job.apply_url),
+        "source": job.source,
+        "job_id": job.source_job_id or "",
+    }
 
 
 def run_scraper_workflow(
@@ -1183,46 +115,49 @@ def run_scraper_workflow(
     ashby_organizations: list[str],
     log: LogFn,
 ) -> Path | None:
-    raw_jobs = scrape_selected_sources(
+    source_ids = [
+        SOURCE_LABELS[key]
+        for key, enabled in selected_sources.items()
+        if enabled
+    ]
+    config = SearchConfig(
         query=query,
+        posted_after=start_date,
         max_pages=max_pages,
-        selected_sources=selected_sources,
+        sources=source_ids,
         greenhouse_boards=greenhouse_boards,
         lever_companies=lever_companies,
         ashby_organizations=ashby_organizations,
-        log=log,
     )
+    results = create_default_registry().run_selected(config)
+    all_jobs: list[Job] = []
+    for result in results:
+        all_jobs.extend(result.jobs)
+        log(f"{result.source_id}: added {len(result.jobs)} normalized jobs.")
+        for issue in result.issues:
+            level = "failed" if issue.fatal else "warning"
+            log(f"{result.source_id} {level}: {issue.message}")
 
-    if not raw_jobs:
+    jobs = deduplicate_jobs(all_jobs)
+    if not jobs:
         log("No jobs found from the selected sources.")
         return None
 
-    dated_jobs, missing_date_count = filter_jobs_by_date(
-        raw_jobs,
-        start_date,
-    )
-
-    log(
-        f"Date filter: {start_date.isoformat()} to "
-        f"{datetime.now().date().isoformat()}"
-    )
+    dated_jobs, missing_date_count = filter_jobs_by_date(jobs, start_date)
+    log(f"Date filter: {start_date.isoformat()} to {date.today().isoformat()}")
     log(f"Jobs inside date range: {len(dated_jobs)}")
-
     if missing_date_count:
         log(
             f"Skipped {missing_date_count} jobs because the source did not "
             "provide a recognizable posted date."
         )
-
     if not dated_jobs:
         log("No jobs were found inside the selected date range.")
         return None
 
-    cleaned_jobs = clean_jobs(dated_jobs)
-    saved_path = export_to_excel(cleaned_jobs, output_filename)
+    saved_path = export_to_excel(dated_jobs, output_filename)
     log(f"Saved: {saved_path}")
-    log(f"Completed: {len(cleaned_jobs)} jobs saved.")
-
+    log(f"Completed: {len(dated_jobs)} jobs saved.")
     return saved_path
 
 
@@ -1284,7 +219,7 @@ class HiringCafeScraperApp:
         ttk.Spinbox(
             form,
             from_=1,
-            to=100,
+            to=25,
             textvariable=self.max_pages_var,
             width=8,
         ).grid(row=2, column=1, sticky="w", pady=(10, 0))
@@ -1431,6 +366,9 @@ class HiringCafeScraperApp:
 
         if max_pages < 1:
             messagebox.showerror("Invalid pages", "Maximum pages must be at least 1.")
+            return None
+        if max_pages > 25:
+            messagebox.showerror("Invalid pages", "Maximum pages cannot exceed 25.")
             return None
 
         output_text = self.output_var.get().strip()

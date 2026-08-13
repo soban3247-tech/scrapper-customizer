@@ -21,10 +21,13 @@ from .errors import (
     ScraperResponseError,
 )
 from .greenhouse import GreenhouseScraper
+from .hiringcafe import HiringCafeScraper
 from .lever import LeverScraper
 from .remotive import RemotiveScraper
 from .remote_ok import RemoteOkScraper
 from .registry import ScraperRegistry
+from .defaults import create_default_registry
+from .service import collect_jobs, deduplicate_jobs, filter_jobs_by_date
 
 __all__ = [
     "ArbeitnowScraper",
@@ -32,6 +35,7 @@ __all__ = [
     "ConfigFieldKind",
     "JobScraper",
     "GreenhouseScraper",
+    "HiringCafeScraper",
     "LeverScraper",
     "RemotiveScraper",
     "RemoteOkScraper",
@@ -48,5 +52,9 @@ __all__ = [
     "ScraperRegistry",
     "ScraperRequestError",
     "ScraperResponseError",
+    "collect_jobs",
+    "create_default_registry",
+    "deduplicate_jobs",
+    "filter_jobs_by_date",
 ]
 
