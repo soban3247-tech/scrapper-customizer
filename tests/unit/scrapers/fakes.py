@@ -4,9 +4,20 @@ from typing import Any
 
 
 class FakeResponse:
-    def __init__(self, payload: Any, *, status_code: int = 200) -> None:
+    def __init__(
+        self,
+        payload: Any,
+        *,
+        status_code: int = 200,
+        text: str | None = None,
+        headers: dict[str, str] | None = None,
+        url: str = "https://example.com",
+    ) -> None:
         self.payload = payload
         self.status_code = status_code
+        self.text = text if text is not None else ""
+        self.headers = headers or {"Content-Type": "application/json"}
+        self.url = url
 
     def json(self) -> Any:
         if isinstance(self.payload, Exception):
