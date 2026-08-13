@@ -1,0 +1,3 @@
+# Preserve document fixtures and future generated documents byte-for-byte.
+*.pdf binary
+*.docx binary

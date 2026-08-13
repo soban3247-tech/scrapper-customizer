@@ -22,3 +22,4 @@ scikit-learn>=1.6
 
 # Testing
 pytest>=8.3
+reportlab>=4.2  # Generate synthetic PDF test fixtures
