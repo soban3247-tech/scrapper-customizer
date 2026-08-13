@@ -46,7 +46,7 @@ Remember their could be more of these job platforms added from where we could sc
 - [x] Show the extracted profile in an editable form
 - [x] Validate the corrected profile with Pydantic
 - [x] Save the profile in SQLite for later sessions
-- [ ] Add parser and extraction tests using sample CVs
+- [x] Add parser and extraction tests using sample CVs
 
 **Outcome:** The user can upload a CV and confirm an accurate profile.
 
