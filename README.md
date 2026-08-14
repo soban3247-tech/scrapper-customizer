@@ -27,10 +27,10 @@ git clone https://github.com/soban3247-tech/scrapper-customizer.git
 cd scrapper-customizer
 ```
 
-To work from the current planning branch:
+To work from the current stable branch:
 
 ```powershell
-git switch agent/project-planning
+git switch main
 ```
 
 ### 2. Install uv
@@ -85,17 +85,18 @@ uv pip install -r requirements-ai.txt
 
 ## Run the application
 
-The current application uses Tkinter:
-
-```powershell
-uv run python UI.py
-```
-
-After the planned Streamlit interface is implemented, run it with:
+Start the Streamlit application:
 
 ```powershell
 uv run streamlit run app.py
 ```
+
+Open the local address shown in the terminal, normally
+`http://localhost:8501`. The **CV profile** tab reads and confirms a PDF or
+DOCX CV. The **Job search** tab prefills its fields from that saved profile and
+runs each selected source independently. Greenhouse, Lever, and Ashby show
+their board-name settings when enabled. Source errors are displayed without
+stopping the remaining sources.
 
 ## Run tests
 
@@ -122,9 +123,9 @@ outputs/             Generated CVs and exports (contents ignored by Git)
 Start a branch for one focused piece of work:
 
 ```powershell
-git switch agent/project-planning
+git switch main
 git pull
-git switch -c feature/project-foundation
+git switch -c feature/short-task-name
 ```
 
 Review and save your changes:
@@ -132,14 +133,14 @@ Review and save your changes:
 ```powershell
 git status
 git diff
-git add README.md PLAN.md .gitignore .env.example
-git commit -m "chore: complete project foundation"
-git push -u origin feature/project-foundation
+git add <changed-files>
+git commit -m "type: describe the completed change"
+git push -u origin feature/short-task-name
 ```
 
-Then open GitHub and create a pull request from the feature branch into
-`agent/project-planning`. Do not commit `.venv`, `.env`, real CVs, databases,
-generated CVs, or API credentials.
+Then open GitHub and create a pull request from the feature branch into `main`.
+Do not commit `.venv`, `.env`, real CVs, databases, generated CVs, or API
+credentials.
 
 ## Updating dependencies
 
