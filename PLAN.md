@@ -65,15 +65,15 @@ Remember their could be more of these job platforms added from where we could sc
 
 ## Phase 4: Filtering, Ranking, and Results
 
-- [ ] Remove jobs with no meaningful title, domain, or skill relationship
-- [ ] Calculate a 0-100 score using title, skills, domain, preferences, and recency
-- [ ] Limit the effect of repeated keywords
-- [ ] Record matched skills, missing skills, and a short ranking explanation
-- [ ] Sort results from highest to lowest score
-- [ ] Display results in a searchable table with application links
-- [ ] Save normalized jobs and match details to SQLite
-- [ ] Export the displayed results to CSV
-- [ ] Add ranking tests for strong, weak, and unrelated job descriptions
+- [x] Remove jobs with no meaningful title, domain, or skill relationship
+- [x] Calculate a 0-100 score using title, skills, domain, preferences, and recency
+- [x] Limit the effect of repeated keywords
+- [x] Record matched skills, missing skills, and a short ranking explanation
+- [x] Sort results from highest to lowest score
+- [x] Display results in a searchable table with application links
+- [x] Save normalized jobs and match details to SQLite
+- [x] Export the displayed results to CSV
+- [x] Add ranking tests for strong, weak, and unrelated job descriptions
 
 **Outcome:** Each retained job has a useful score and understandable reason.
 

@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from job_assistant.models import Job, SearchConfig
+from job_assistant.models import MatchResult, SearchConfig
 from job_assistant.scrapers import ScraperRegistry
 from job_assistant.search import (
     SearchProgress,
@@ -49,7 +49,7 @@ def render_search_result(
     *,
     streamlit_module: Any | None = None,
 ) -> None:
-    """Display source outcomes, errors, raw jobs, and the legacy Excel export."""
+    """Display source outcomes, searchable ranked jobs, and safe exports."""
 
     st = streamlit_module or _load_streamlit()
     st.subheader("Search results")
@@ -80,26 +80,87 @@ def render_search_result(
         st.info("No jobs matched the selected search and date range.")
         return
 
-    rows = [_job_row(job) for job in result.jobs]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    if not result.matches:
+        st.info("No jobs had a meaningful title, domain, or skill relationship.")
+        return
+
+    filter_text = st.text_input(
+        "Filter displayed results",
+        placeholder="Search title, company, location, source, or skill",
+    )
+    displayed_matches = filter_matches(result.matches, filter_text)
+    if not displayed_matches:
+        st.info("No ranked results match this table filter.")
+        return
+
+    rows = [_match_row(match) for match in displayed_matches]
+    st.caption(f"Showing {len(rows)} of {len(result.matches)} ranked jobs.")
+    st.dataframe(
+        rows,
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Apply": st.column_config.LinkColumn("Apply")},
+    )
+    st.download_button(
+        "Download displayed results as CSV",
+        data=_csv_bytes(rows),
+        file_name="ranked_job_search_results.csv",
+        mime="text/csv",
+    )
     st.download_button(
         "Download Excel results",
         data=_excel_bytes(rows),
-        file_name="job_search_results.xlsx",
+        file_name="ranked_job_search_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 
-def _job_row(job: Job) -> dict[str, object]:
+def filter_matches(
+    matches: list[MatchResult],
+    query: str,
+) -> list[MatchResult]:
+    """Filter ranked rows without changing their score order."""
+
+    terms = [term.casefold() for term in query.split() if term.strip()]
+    if not terms:
+        return list(matches)
+    filtered: list[MatchResult] = []
+    for match in matches:
+        haystack = " ".join(
+            [
+                match.job.source,
+                match.job.title,
+                match.job.company,
+                match.job.location or "",
+                *match.matched_skills,
+                *match.missing_skills,
+                match.explanation,
+            ]
+        ).casefold()
+        if all(term in haystack for term in terms):
+            filtered.append(match)
+    return filtered
+
+
+def _match_row(match: MatchResult) -> dict[str, object]:
+    job = match.job
     return {
+        "Score": match.score,
         "Source": job.source,
         "Title": job.title,
         "Company": job.company,
         "Location": job.location or "",
         "Posted": job.posted_date.isoformat() if job.posted_date else "",
         "Workplace": job.workplace_type or "",
+        "Matched skills": ", ".join(match.matched_skills),
+        "Missing skills": ", ".join(match.missing_skills),
+        "Why it matched": match.explanation,
         "Apply": str(job.apply_url),
     }
+
+
+def _csv_bytes(rows: list[dict[str, object]]) -> bytes:
+    return pd.DataFrame(rows).to_csv(index=False).encode("utf-8-sig")
 
 
 def _excel_bytes(rows: list[dict[str, object]]) -> bytes:
