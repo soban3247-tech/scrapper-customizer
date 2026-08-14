@@ -14,15 +14,22 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from job_assistant.models import Profile
+from job_assistant.matching import rank_jobs
 from job_assistant.resume import ResumeReadError, extract_profile, read_resume_bytes
 from job_assistant.scrapers import create_default_registry
-from job_assistant.storage import ProfileRepository, ProfileStorageError
+from job_assistant.storage import (
+    ProfileRepository,
+    ProfileStorageError,
+    SearchResultRepository,
+    SearchResultStorageError,
+)
 from ui.profile_form import render_profile_form
 from ui.search_form import render_search_form
 from ui.search_results import execute_search, render_search_result
 
 EXTRACTED_PROFILE_KEY = "extracted_profile"
 SEARCH_RESULT_KEY = "search_result"
+SEARCH_ID_KEY = "search_id"
 
 
 def main() -> None:
@@ -48,9 +55,31 @@ def main() -> None:
     with search_tab:
         config = render_search_form(confirmed_profile, registry)
         if config is not None:
-            st.session_state[SEARCH_RESULT_KEY] = execute_search(registry, config)
+            raw_result = execute_search(registry, config)
+            ranking_profile = confirmed_profile or Profile()
+            ranked_result = raw_result.model_copy(
+                update={
+                    "matches": rank_jobs(
+                        raw_result.jobs,
+                        ranking_profile,
+                        config,
+                    )
+                }
+            )
+            st.session_state[SEARCH_RESULT_KEY] = ranked_result
+            st.session_state.pop(SEARCH_ID_KEY, None)
+            try:
+                st.session_state[SEARCH_ID_KEY] = SearchResultRepository().save(
+                    config,
+                    ranked_result.matches,
+                )
+            except SearchResultStorageError as exc:
+                st.warning(str(exc))
         result = st.session_state.get(SEARCH_RESULT_KEY)
         if result is not None:
+            search_id = st.session_state.get(SEARCH_ID_KEY)
+            if search_id is not None:
+                st.caption(f"Saved locally as search #{search_id}.")
             render_search_result(result)
 
 
@@ -87,6 +116,7 @@ def _render_profile_workflow(
         return
     st.session_state.pop(EXTRACTED_PROFILE_KEY, None)
     st.session_state.pop(SEARCH_RESULT_KEY, None)
+    st.session_state.pop(SEARCH_ID_KEY, None)
     st.success("Your confirmed profile was saved for future sessions.")
     st.rerun()
 

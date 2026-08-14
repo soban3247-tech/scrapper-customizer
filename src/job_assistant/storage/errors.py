@@ -7,3 +7,7 @@ class StorageError(Exception):
 
 class ProfileStorageError(StorageError):
     """A confirmed profile could not be saved or reconstructed."""
+
+
+class SearchResultStorageError(StorageError):
+    """Ranked job-search results could not be safely persisted or loaded."""

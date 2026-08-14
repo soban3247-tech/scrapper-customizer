@@ -5,7 +5,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from job_assistant.models import Job, SearchConfig
+from job_assistant.models import Job, MatchResult, SearchConfig
 from job_assistant.scrapers import (
     ScrapeResult,
     ScraperIssue,
@@ -42,6 +42,7 @@ class SearchRunResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     jobs: list[Job] = Field(default_factory=list)
+    matches: list[MatchResult] = Field(default_factory=list)
     issues: list[ScraperIssue] = Field(default_factory=list)
     source_results: list[ScrapeResult] = Field(default_factory=list)
     jobs_without_dates: int = Field(default=0, ge=0)

@@ -96,7 +96,10 @@ Open the local address shown in the terminal, normally
 DOCX CV. The **Job search** tab prefills its fields from that saved profile and
 runs each selected source independently. Greenhouse, Lever, and Ashby show
 their board-name settings when enabled. Source errors are displayed without
-stopping the remaining sources.
+stopping the remaining sources. Related jobs are ranked from 0–100 with matched
+and missing skills plus a short explanation. The displayed table can be
+searched and downloaded as CSV or Excel, and ranked searches are saved locally
+in SQLite for later workflow steps.
 
 ## Run tests
 

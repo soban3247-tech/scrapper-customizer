@@ -92,6 +92,13 @@ Each result will include a score and a short reason, for example:
 Repeated keywords will have a limited effect so keyword stuffing cannot produce
 an unrealistic score.
 
+The deterministic MVP score uses weighted title (35%), skill (35%), domain
+(15%), preference (10%), and recency (5%) components. Components without enough
+profile or job evidence are omitted and the remaining weights are normalized.
+Each unique skill is counted once, regardless of how often it appears in a job
+description. Ranked jobs and their evidence are stored in SQLite; credentials
+and other source-specific options are never persisted.
+
 ## Development Phases
 
 ### Phase 1: Foundation
