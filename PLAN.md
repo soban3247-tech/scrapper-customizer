@@ -81,13 +81,13 @@ Remember their could be more of these job platforms added from where we could sc
 
 - [x] Let the user select a job from the results table
 - [x] Compare the job description with the confirmed profile and original CV
-- [ ] Reorder and reword relevant CV content without inventing facts
+- [x] Reorder and reword relevant CV content without inventing facts
 - [x] Clearly flag requested skills that are absent from the CV
-- [ ] Add an editable preview before export
+- [x] Add an editable preview before export
 - [ ] Create a simple DOCX template with docxtpl
 - [ ] Create a second professional DOCX template
 - [ ] Export the selected version as DOCX
-- [ ] Add tests that prevent unsupported skills or experience from being added
+- [x] Add tests that prevent unsupported skills or experience from being added
 
 **Outcome:** The user can review and export an honest, job-focused CV.
 

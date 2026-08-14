@@ -13,7 +13,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from job_assistant.customizer import compare_cv_to_job
+from job_assistant.customizer import CvDraft, compare_cv_to_job, create_cv_draft
 from job_assistant.matching import rank_jobs
 from job_assistant.models import MatchResult, Profile
 from job_assistant.resume import ResumeReadError, extract_profile, read_resume_bytes
@@ -24,6 +24,7 @@ from job_assistant.storage import (
     SearchResultRepository,
     SearchResultStorageError,
 )
+from ui.cv_preview import render_editable_cv_preview
 from ui.job_comparison import render_job_comparison
 from ui.profile_form import render_profile_form
 from ui.search_form import render_search_form
@@ -35,6 +36,8 @@ SEARCH_ID_KEY = "search_id"
 ORIGINAL_CV_TEXT_KEY = "original_cv_text"
 ORIGINAL_CV_FILENAME_KEY = "original_cv_filename"
 SELECTED_MATCH_KEY = "selected_match"
+CV_DRAFT_KEY = "cv_draft"
+REVIEWED_CV_DRAFT_KEY = "reviewed_cv_draft"
 
 
 def main() -> None:
@@ -63,6 +66,7 @@ def main() -> None:
         config = render_search_form(confirmed_profile, registry)
         if config is not None:
             st.session_state.pop(SELECTED_MATCH_KEY, None)
+            _clear_customization_draft()
             raw_result = execute_search(registry, config)
             ranking_profile = confirmed_profile or Profile()
             ranked_result = raw_result.model_copy(
@@ -90,6 +94,8 @@ def main() -> None:
                 st.caption(f"Saved locally as search #{search_id}.")
             selected_match = render_search_result(result)
             if selected_match is not None:
+                if st.session_state.get(SELECTED_MATCH_KEY) != selected_match:
+                    _clear_customization_draft()
                 st.session_state[SELECTED_MATCH_KEY] = selected_match
 
     with customization_tab:
@@ -113,6 +119,7 @@ def _render_profile_workflow(
         st.session_state.pop(SEARCH_RESULT_KEY, None)
         st.session_state.pop(SEARCH_ID_KEY, None)
         st.session_state.pop(SELECTED_MATCH_KEY, None)
+        _clear_customization_draft()
         try:
             document = read_resume_bytes(uploaded_file.getvalue(), uploaded_file.name)
             st.session_state[EXTRACTED_PROFILE_KEY] = extract_profile(document.text)
@@ -139,6 +146,7 @@ def _render_profile_workflow(
     st.session_state.pop(SEARCH_RESULT_KEY, None)
     st.session_state.pop(SEARCH_ID_KEY, None)
     st.session_state.pop(SELECTED_MATCH_KEY, None)
+    _clear_customization_draft()
     st.success("Your confirmed profile was saved for future sessions.")
     st.rerun()
 
@@ -189,6 +197,30 @@ def _render_customization_workflow(confirmed_profile: Profile | None) -> None:
         comparison,
         cv_filename=st.session_state.get(ORIGINAL_CV_FILENAME_KEY),
     )
+    generated_draft = create_cv_draft(comparison, original_cv_text)
+    stored_draft = st.session_state.get(CV_DRAFT_KEY)
+    if not isinstance(stored_draft, CvDraft) or (
+        stored_draft.draft_id != generated_draft.draft_id
+    ):
+        st.session_state[CV_DRAFT_KEY] = generated_draft
+        st.session_state.pop(REVIEWED_CV_DRAFT_KEY, None)
+        stored_draft = generated_draft
+
+    reviewed_draft = st.session_state.get(REVIEWED_CV_DRAFT_KEY)
+    active_draft = (
+        reviewed_draft
+        if isinstance(reviewed_draft, CvDraft)
+        and reviewed_draft.draft_id == stored_draft.draft_id
+        else stored_draft
+    )
+    reviewed = render_editable_cv_preview(active_draft)
+    if reviewed is not None:
+        st.session_state[REVIEWED_CV_DRAFT_KEY] = reviewed
+
+
+def _clear_customization_draft() -> None:
+    st.session_state.pop(CV_DRAFT_KEY, None)
+    st.session_state.pop(REVIEWED_CV_DRAFT_KEY, None)
 
 
 if __name__ == "__main__":
