@@ -48,6 +48,7 @@ ui/                                 Upload, search, results, and CV review scree
 src/job_assistant/
     models/                         Shared Profile and Job data models
     resume/                         CV reading and profile extraction
+    search/                         Multi-source search orchestration and progress
     scrapers/                       One adapter for each job source
     matching/                       Filtering, scoring, and explanations
     storage/                        SQLite storage and CSV export

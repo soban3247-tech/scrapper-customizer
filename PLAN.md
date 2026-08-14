@@ -52,14 +52,14 @@ Remember their could be more of these job platforms added from where we could sc
 
 ## Phase 3: Search and Scraping Interface
 
-- [ ] Create the Streamlit application entry point
-- [ ] Prefill search fields from the confirmed profile
-- [ ] Allow job title, skills, location, date, and page limits to be edited
-- [ ] Allow sources to be selected independently
-- [ ] Collect any source-specific board names or API credentials
-- [ ] Run selected scrapers and show progress and source errors
-- [ ] Continue the search when one source fails
-- [ ] Remove the Tkinter UI after Streamlit reaches feature parity
+- [x] Create the Streamlit application entry point
+- [x] Prefill search fields from the confirmed profile
+- [x] Allow job title, skills, location, date, and page limits to be edited
+- [x] Allow sources to be selected independently
+- [x] Collect any source-specific board names or API credentials
+- [x] Run selected scrapers and show progress and source errors
+- [x] Continue the search when one source fails
+- [x] Remove the Tkinter UI after Streamlit reaches feature parity
 
 **Outcome:** The user can configure and run a multi-source job search.
 
