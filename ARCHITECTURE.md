@@ -109,6 +109,16 @@ excerpts are copied from the source text, and missing job requirements are
 displayed explicitly. The original CV text remains in the active Streamlit
 session and is not persisted to SQLite.
 
+The first tailoring step creates an evidence-locked draft. Relevant source
+lines are promoted ahead of unrelated content and may receive only conservative,
+allowlisted wording cleanup. Every draft line retains its immutable original
+text. User edits are validated line by line: recognized skills and numeric
+claims cannot be added, vocabulary must remain source-backed, and
+meaning-changing qualifiers such as `basic`, `junior`, or `not` cannot be
+removed. Missing job requirements remain warnings rather than being inserted
+into the CV. The reviewed preview also remains session-only until a later export
+step creates a user-requested file.
+
 ## Development Phases
 
 ### Phase 1: Foundation

@@ -102,11 +102,14 @@ searched and downloaded as CSV or Excel, and ranked searches are saved locally
 in SQLite for later workflow steps.
 
 Select a row in the ranked results table to use the **CV customization** tab.
-The first customization step compares the job with literal evidence from the
+The customization workflow compares the job with literal evidence from the
 uploaded CV, flags requested skills and experience that the original text does
-not support, and highlights relevant existing CV lines. For privacy, original
-CV text is held only in the active Streamlit session and is not written to the
-SQLite database.
+not support, and promotes relevant existing CV lines. It applies only small,
+allowlisted wording improvements and provides a line-by-line editable preview.
+Every edit is checked against its original source line; new skills, numbers,
+experience claims, and unsupported wording are rejected. For privacy, original
+CV text and the preview are held only in the active Streamlit session and are
+not written to the SQLite database.
 
 ## Run tests
 
