@@ -5,7 +5,13 @@ from io import BytesIO, StringIO
 from openpyxl import load_workbook
 
 from job_assistant.models import Job, MatchResult
-from ui.search_results import _csv_bytes, _excel_bytes, _match_row, filter_matches
+from ui.search_results import (
+    _csv_bytes,
+    _excel_bytes,
+    _match_row,
+    filter_matches,
+    match_from_selected_rows,
+)
 
 
 def result() -> MatchResult:
@@ -51,3 +57,12 @@ def test_table_filter_searches_company_location_and_skills() -> None:
 
     assert filter_matches([match], "example python") == [match]
     assert filter_matches([match], "karachi") == []
+
+
+def test_selected_table_row_resolves_the_visible_match_safely() -> None:
+    match = result()
+
+    assert match_from_selected_rows([match], [0]) == match
+    assert match_from_selected_rows([match], []) is None
+    assert match_from_selected_rows([match], [4]) is None
+    assert match_from_selected_rows([match], [True]) is None

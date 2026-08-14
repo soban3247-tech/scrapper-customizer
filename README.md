@@ -101,6 +101,13 @@ and missing skills plus a short explanation. The displayed table can be
 searched and downloaded as CSV or Excel, and ranked searches are saved locally
 in SQLite for later workflow steps.
 
+Select a row in the ranked results table to use the **CV customization** tab.
+The first customization step compares the job with literal evidence from the
+uploaded CV, flags requested skills and experience that the original text does
+not support, and highlights relevant existing CV lines. For privacy, original
+CV text is held only in the active Streamlit session and is not written to the
+SQLite database.
+
 ## Run tests
 
 ```powershell

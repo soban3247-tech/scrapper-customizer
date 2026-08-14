@@ -99,6 +99,16 @@ Each unique skill is counted once, regardless of how often it appears in a job
 description. Ranked jobs and their evidence are stored in SQLite; credentials
 and other source-specific options are never persisted.
 
+## CV Customization Safety
+
+Customization begins with an evidence-only comparison. A selected job is
+checked against both the confirmed profile and the original uploaded CV text.
+Supported skills and experience must appear in the original CV; profile-only
+claims are shown as unverified rather than treated as evidence. Relevant CV
+excerpts are copied from the source text, and missing job requirements are
+displayed explicitly. The original CV text remains in the active Streamlit
+session and is not persisted to SQLite.
+
 ## Development Phases
 
 ### Phase 1: Foundation
