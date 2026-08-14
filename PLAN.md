@@ -52,42 +52,42 @@ Remember their could be more of these job platforms added from where we could sc
 
 ## Phase 3: Search and Scraping Interface
 
-- [x] Create the Streamlit application entry point
-- [x] Prefill search fields from the confirmed profile
-- [x] Allow job title, skills, location, date, and page limits to be edited
-- [x] Allow sources to be selected independently
-- [x] Collect any source-specific board names or API credentials
-- [x] Run selected scrapers and show progress and source errors
-- [x] Continue the search when one source fails
-- [x] Remove the Tkinter UI after Streamlit reaches feature parity
+- [ ] Create the Streamlit application entry point
+- [ ] Prefill search fields from the confirmed profile
+- [ ] Allow job title, skills, location, date, and page limits to be edited
+- [ ] Allow sources to be selected independently
+- [ ] Collect any source-specific board names or API credentials
+- [ ] Run selected scrapers and show progress and source errors
+- [ ] Continue the search when one source fails
+- [ ] Remove the Tkinter UI after Streamlit reaches feature parity
 
 **Outcome:** The user can configure and run a multi-source job search.
 
 ## Phase 4: Filtering, Ranking, and Results
 
-- [x] Remove jobs with no meaningful title, domain, or skill relationship
-- [x] Calculate a 0-100 score using title, skills, domain, preferences, and recency
-- [x] Limit the effect of repeated keywords
-- [x] Record matched skills, missing skills, and a short ranking explanation
-- [x] Sort results from highest to lowest score
-- [x] Display results in a searchable table with application links
-- [x] Save normalized jobs and match details to SQLite
-- [x] Export the displayed results to CSV
-- [x] Add ranking tests for strong, weak, and unrelated job descriptions
+- [ ] Remove jobs with no meaningful title, domain, or skill relationship
+- [ ] Calculate a 0-100 score using title, skills, domain, preferences, and recency
+- [ ] Limit the effect of repeated keywords
+- [ ] Record matched skills, missing skills, and a short ranking explanation
+- [ ] Sort results from highest to lowest score
+- [ ] Display results in a searchable table with application links
+- [ ] Save normalized jobs and match details to SQLite
+- [ ] Export the displayed results to CSV
+- [ ] Add ranking tests for strong, weak, and unrelated job descriptions
 
 **Outcome:** Each retained job has a useful score and understandable reason.
 
 ## Phase 5: CV Customization
 
-- [x] Let the user select a job from the results table
-- [x] Compare the job description with the confirmed profile and original CV
-- [x] Reorder and reword relevant CV content without inventing facts
-- [x] Clearly flag requested skills that are absent from the CV
-- [x] Add an editable preview before export
+- [ ] Let the user select a job from the results table
+- [ ] Compare the job description with the confirmed profile and original CV
+- [ ] Reorder and reword relevant CV content without inventing facts
+- [ ] Clearly flag requested skills that are absent from the CV
+- [ ] Add an editable preview before export
 - [ ] Create a simple DOCX template with docxtpl
 - [ ] Create a second professional DOCX template
 - [ ] Export the selected version as DOCX
-- [x] Add tests that prevent unsupported skills or experience from being added
+- [ ] Add tests that prevent unsupported skills or experience from being added
 
 **Outcome:** The user can review and export an honest, job-focused CV.
 

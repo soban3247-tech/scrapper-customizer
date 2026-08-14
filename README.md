@@ -27,10 +27,10 @@ git clone https://github.com/soban3247-tech/scrapper-customizer.git
 cd scrapper-customizer
 ```
 
-To work from the current stable branch:
+To work from the current planning branch:
 
 ```powershell
-git switch main
+git switch agent/project-planning
 ```
 
 ### 2. Install uv
@@ -85,31 +85,17 @@ uv pip install -r requirements-ai.txt
 
 ## Run the application
 
-Start the Streamlit application:
+The current application uses Tkinter:
+
+```powershell
+uv run python UI.py
+```
+
+After the planned Streamlit interface is implemented, run it with:
 
 ```powershell
 uv run streamlit run app.py
 ```
-
-Open the local address shown in the terminal, normally
-`http://localhost:8501`. The **CV profile** tab reads and confirms a PDF or
-DOCX CV. The **Job search** tab prefills its fields from that saved profile and
-runs each selected source independently. Greenhouse, Lever, and Ashby show
-their board-name settings when enabled. Source errors are displayed without
-stopping the remaining sources. Related jobs are ranked from 0–100 with matched
-and missing skills plus a short explanation. The displayed table can be
-searched and downloaded as CSV or Excel, and ranked searches are saved locally
-in SQLite for later workflow steps.
-
-Select a row in the ranked results table to use the **CV customization** tab.
-The customization workflow compares the job with literal evidence from the
-uploaded CV, flags requested skills and experience that the original text does
-not support, and promotes relevant existing CV lines. It applies only small,
-allowlisted wording improvements and provides a line-by-line editable preview.
-Every edit is checked against its original source line; new skills, numbers,
-experience claims, and unsupported wording are rejected. For privacy, original
-CV text and the preview are held only in the active Streamlit session and are
-not written to the SQLite database.
 
 ## Run tests
 
@@ -136,9 +122,9 @@ outputs/             Generated CVs and exports (contents ignored by Git)
 Start a branch for one focused piece of work:
 
 ```powershell
-git switch main
+git switch agent/project-planning
 git pull
-git switch -c feature/short-task-name
+git switch -c feature/project-foundation
 ```
 
 Review and save your changes:
@@ -146,14 +132,14 @@ Review and save your changes:
 ```powershell
 git status
 git diff
-git add <changed-files>
-git commit -m "type: describe the completed change"
-git push -u origin feature/short-task-name
+git add README.md PLAN.md .gitignore .env.example
+git commit -m "chore: complete project foundation"
+git push -u origin feature/project-foundation
 ```
 
-Then open GitHub and create a pull request from the feature branch into `main`.
-Do not commit `.venv`, `.env`, real CVs, databases, generated CVs, or API
-credentials.
+Then open GitHub and create a pull request from the feature branch into
+`agent/project-planning`. Do not commit `.venv`, `.env`, real CVs, databases,
+generated CVs, or API credentials.
 
 ## Updating dependencies
 
