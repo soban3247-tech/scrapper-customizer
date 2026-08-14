@@ -13,8 +13,9 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from job_assistant.models import Profile
+from job_assistant.customizer import compare_cv_to_job
 from job_assistant.matching import rank_jobs
+from job_assistant.models import MatchResult, Profile
 from job_assistant.resume import ResumeReadError, extract_profile, read_resume_bytes
 from job_assistant.scrapers import create_default_registry
 from job_assistant.storage import (
@@ -23,6 +24,7 @@ from job_assistant.storage import (
     SearchResultRepository,
     SearchResultStorageError,
 )
+from ui.job_comparison import render_job_comparison
 from ui.profile_form import render_profile_form
 from ui.search_form import render_search_form
 from ui.search_results import execute_search, render_search_result
@@ -30,6 +32,9 @@ from ui.search_results import execute_search, render_search_result
 EXTRACTED_PROFILE_KEY = "extracted_profile"
 SEARCH_RESULT_KEY = "search_result"
 SEARCH_ID_KEY = "search_id"
+ORIGINAL_CV_TEXT_KEY = "original_cv_text"
+ORIGINAL_CV_FILENAME_KEY = "original_cv_filename"
+SELECTED_MATCH_KEY = "selected_match"
 
 
 def main() -> None:
@@ -48,13 +53,16 @@ def main() -> None:
     confirmed_profile = _load_profile(repository)
     registry = create_default_registry()
 
-    profile_tab, search_tab = st.tabs(["CV profile", "Job search"])
+    profile_tab, search_tab, customization_tab = st.tabs(
+        ["CV profile", "Job search", "CV customization"]
+    )
     with profile_tab:
         _render_profile_workflow(repository, confirmed_profile)
 
     with search_tab:
         config = render_search_form(confirmed_profile, registry)
         if config is not None:
+            st.session_state.pop(SELECTED_MATCH_KEY, None)
             raw_result = execute_search(registry, config)
             ranking_profile = confirmed_profile or Profile()
             ranked_result = raw_result.model_copy(
@@ -80,7 +88,12 @@ def main() -> None:
             search_id = st.session_state.get(SEARCH_ID_KEY)
             if search_id is not None:
                 st.caption(f"Saved locally as search #{search_id}.")
-            render_search_result(result)
+            selected_match = render_search_result(result)
+            if selected_match is not None:
+                st.session_state[SELECTED_MATCH_KEY] = selected_match
+
+    with customization_tab:
+        _render_customization_workflow(confirmed_profile)
 
 
 def _render_profile_workflow(
@@ -94,9 +107,17 @@ def _render_profile_workflow(
     )
     uploaded_file = st.file_uploader("Upload your CV", type=("pdf", "docx"))
     if uploaded_file is not None and st.button("Extract profile from CV"):
+        st.session_state.pop(EXTRACTED_PROFILE_KEY, None)
+        st.session_state.pop(ORIGINAL_CV_TEXT_KEY, None)
+        st.session_state.pop(ORIGINAL_CV_FILENAME_KEY, None)
+        st.session_state.pop(SEARCH_RESULT_KEY, None)
+        st.session_state.pop(SEARCH_ID_KEY, None)
+        st.session_state.pop(SELECTED_MATCH_KEY, None)
         try:
             document = read_resume_bytes(uploaded_file.getvalue(), uploaded_file.name)
             st.session_state[EXTRACTED_PROFILE_KEY] = extract_profile(document.text)
+            st.session_state[ORIGINAL_CV_TEXT_KEY] = document.text
+            st.session_state[ORIGINAL_CV_FILENAME_KEY] = document.filename
             st.success("CV text was read. Review the extracted profile below.")
         except ResumeReadError as exc:
             st.error(str(exc))
@@ -117,6 +138,7 @@ def _render_profile_workflow(
     st.session_state.pop(EXTRACTED_PROFILE_KEY, None)
     st.session_state.pop(SEARCH_RESULT_KEY, None)
     st.session_state.pop(SEARCH_ID_KEY, None)
+    st.session_state.pop(SELECTED_MATCH_KEY, None)
     st.success("Your confirmed profile was saved for future sessions.")
     st.rerun()
 
@@ -136,6 +158,37 @@ def _load_profile(repository: ProfileRepository) -> Profile | None:
     except ProfileStorageError as exc:
         st.error(str(exc))
         return None
+
+
+def _render_customization_workflow(confirmed_profile: Profile | None) -> None:
+    selected_match = st.session_state.get(SELECTED_MATCH_KEY)
+    if not isinstance(selected_match, MatchResult):
+        st.header("CV customization")
+        st.info("Select one ranked job in the Job search results table first.")
+        return
+    if confirmed_profile is None:
+        st.header("CV customization")
+        st.info("Confirm your CV profile before comparing it with a selected job.")
+        return
+
+    original_cv_text = st.session_state.get(ORIGINAL_CV_TEXT_KEY)
+    if not isinstance(original_cv_text, str) or not original_cv_text.strip():
+        st.header("CV customization")
+        st.info(
+            "Upload the original CV again in the CV profile tab. For privacy, "
+            "the original CV text is kept only for the active app session."
+        )
+        return
+
+    comparison = compare_cv_to_job(
+        selected_match,
+        confirmed_profile,
+        original_cv_text,
+    )
+    render_job_comparison(
+        comparison,
+        cv_filename=st.session_state.get(ORIGINAL_CV_FILENAME_KEY),
+    )
 
 
 if __name__ == "__main__":

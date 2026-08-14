@@ -48,8 +48,8 @@ def render_search_result(
     result: SearchRunResult,
     *,
     streamlit_module: Any | None = None,
-) -> None:
-    """Display source outcomes, searchable ranked jobs, and safe exports."""
+) -> MatchResult | None:
+    """Display ranked jobs and return the row selected for CV customization."""
 
     st = streamlit_module or _load_streamlit()
     st.subheader("Search results")
@@ -78,11 +78,11 @@ def render_search_result(
 
     if not result.jobs:
         st.info("No jobs matched the selected search and date range.")
-        return
+        return None
 
     if not result.matches:
         st.info("No jobs had a meaningful title, domain, or skill relationship.")
-        return
+        return None
 
     filter_text = st.text_input(
         "Filter displayed results",
@@ -91,16 +91,28 @@ def render_search_result(
     displayed_matches = filter_matches(result.matches, filter_text)
     if not displayed_matches:
         st.info("No ranked results match this table filter.")
-        return
+        return None
 
     rows = [_match_row(match) for match in displayed_matches]
     st.caption(f"Showing {len(rows)} of {len(result.matches)} ranked jobs.")
-    st.dataframe(
+    selection_event = st.dataframe(
         rows,
         use_container_width=True,
         hide_index=True,
         column_config={"Apply": st.column_config.LinkColumn("Apply")},
+        on_select="rerun",
+        selection_mode="single-row",
+        key="ranked_job_results",
     )
+    selected_match = match_from_selected_rows(
+        displayed_matches,
+        selection_event.selection.rows,
+    )
+    if selected_match is not None:
+        st.success(
+            f"Selected {selected_match.job.title} at "
+            f"{selected_match.job.company} for CV comparison."
+        )
     st.download_button(
         "Download displayed results as CSV",
         data=_csv_bytes(rows),
@@ -113,6 +125,23 @@ def render_search_result(
         file_name="ranked_job_search_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+    return selected_match
+
+
+def match_from_selected_rows(
+    displayed_matches: list[MatchResult],
+    selected_rows: list[int],
+) -> MatchResult | None:
+    """Resolve one visible table row without trusting an out-of-range UI index."""
+
+    if not selected_rows:
+        return None
+    selected_index = selected_rows[0]
+    if isinstance(selected_index, bool) or not isinstance(selected_index, int):
+        return None
+    if not 0 <= selected_index < len(displayed_matches):
+        return None
+    return displayed_matches[selected_index]
 
 
 def filter_matches(

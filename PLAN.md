@@ -79,10 +79,10 @@ Remember their could be more of these job platforms added from where we could sc
 
 ## Phase 5: CV Customization
 
-- [ ] Let the user select a job from the results table
-- [ ] Compare the job description with the confirmed profile and original CV
+- [x] Let the user select a job from the results table
+- [x] Compare the job description with the confirmed profile and original CV
 - [ ] Reorder and reword relevant CV content without inventing facts
-- [ ] Clearly flag requested skills that are absent from the CV
+- [x] Clearly flag requested skills that are absent from the CV
 - [ ] Add an editable preview before export
 - [ ] Create a simple DOCX template with docxtpl
 - [ ] Create a second professional DOCX template
