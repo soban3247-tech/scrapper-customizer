@@ -48,7 +48,6 @@ ui/                                 Upload, search, results, and CV review scree
 src/job_assistant/
     models/                         Shared Profile and Job data models
     resume/                         CV reading and profile extraction
-    search/                         Multi-source search orchestration and progress
     scrapers/                       One adapter for each job source
     matching/                       Filtering, scoring, and explanations
     storage/                        SQLite storage and CSV export
@@ -91,33 +90,6 @@ Each result will include a score and a short reason, for example:
 
 Repeated keywords will have a limited effect so keyword stuffing cannot produce
 an unrealistic score.
-
-The deterministic MVP score uses weighted title (35%), skill (35%), domain
-(15%), preference (10%), and recency (5%) components. Components without enough
-profile or job evidence are omitted and the remaining weights are normalized.
-Each unique skill is counted once, regardless of how often it appears in a job
-description. Ranked jobs and their evidence are stored in SQLite; credentials
-and other source-specific options are never persisted.
-
-## CV Customization Safety
-
-Customization begins with an evidence-only comparison. A selected job is
-checked against both the confirmed profile and the original uploaded CV text.
-Supported skills and experience must appear in the original CV; profile-only
-claims are shown as unverified rather than treated as evidence. Relevant CV
-excerpts are copied from the source text, and missing job requirements are
-displayed explicitly. The original CV text remains in the active Streamlit
-session and is not persisted to SQLite.
-
-The first tailoring step creates an evidence-locked draft. Relevant source
-lines are promoted ahead of unrelated content and may receive only conservative,
-allowlisted wording cleanup. Every draft line retains its immutable original
-text. User edits are validated line by line: recognized skills and numeric
-claims cannot be added, vocabulary must remain source-backed, and
-meaning-changing qualifiers such as `basic`, `junior`, or `not` cannot be
-removed. Missing job requirements remain warnings rather than being inserted
-into the CV. The reviewed preview also remains session-only until a later export
-step creates a user-requested file.
 
 ## Development Phases
 
