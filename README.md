@@ -101,6 +101,16 @@ Open these addresses:
 If port `8000` is unavailable, start the backend on another port and update
 `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to match it.
 
+## Stop the Project
+
+Press `Ctrl+C` in each terminal. If either service keeps running, use this single
+PowerShell command to stop both the frontend on port `3000` and the backend on
+port `8000`:
+
+```powershell
+Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 3000, 8000 } | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /PID $_ /T /F }
+```
+
 ## Test the Project
 
 Run backend tests from the repository root:
