@@ -2,7 +2,8 @@
 
 This plan turns the existing scraper into the Next.js and FastAPI MVP described
 in [ARCHITECTURE.md](ARCHITECTURE.md). Check an item when it is implemented and
-tested.
+tested. Review the detailed [implementation order](IMPLEMENTATION_ORDER.md)
+before starting Phase 3.5, Phase 4, or Phase 5.
 
 ## Phase 0: Project Setup
 
@@ -58,7 +59,6 @@ Remember their could be more of these job platforms added from where we could sc
 
 - [x] Create the FastAPI application entry point and health route
 - [x] Add the CV profile extraction API route
-- [ ] Add the confirmed profile update API route
 - [x] Add the job source discovery and search API routes
 - [x] Initialize the Next.js application in `frontend/`
 - [x] Build the CV upload and editable search profile feature
@@ -71,16 +71,37 @@ Remember their could be more of these job platforms added from where we could sc
 
 **Outcome:** The user can configure and run a multi-source job search.
 
+## Phase 3.5: Authenticated Persistence Foundation
+
+- [ ] Add Supabase Auth to Next.js and authenticated FastAPI requests
+- [ ] Validate Supabase access tokens and scope all stored data to the user
+- [ ] Add Supabase Postgres with SQLAlchemy and Alembic migrations
+- [ ] Store the confirmed profile and extracted CV text as user-owned data
+- [ ] Add authenticated load, update, and delete routes for the current profile
+- [ ] Add persistence boundaries for search runs, normalized jobs, and matches
+- [ ] Separate the combined frontend workflow into feature-owned components
+- [ ] Freeze the shared models and planned Phase 4/5 API contracts
+- [ ] Add authentication, ownership, persistence, and migration tests
+
+**Outcome:** Both developers can start Phases 4 and 5 from the same secure,
+tested contracts and persistence foundation.
+
+After this phase is merged, Phase 4 and Phase 5 may be developed in parallel as
+described in [IMPLEMENTATION_ORDER.md](IMPLEMENTATION_ORDER.md).
+
 ## Phase 4: Filtering, Ranking, and Results
 
+- [ ] Persist each search and return a stable `search_id`
 - [ ] Remove jobs with no meaningful title, domain, or skill relationship
 - [ ] Calculate a 0-100 score using title, skills, domain, preferences, and recency
 - [ ] Limit the effect of repeated keywords
 - [ ] Record matched skills, missing skills, and a short ranking explanation
 - [ ] Sort results from highest to lowest score
+- [ ] Add `POST /jobs/rank` and `GET /jobs/results/{search_id}` routes
 - [ ] Display results in a Next.js searchable table with application links
-- [ ] Save normalized jobs and match details to SQLite
+- [ ] Save normalized jobs and match details to Supabase Postgres
 - [ ] Export the displayed results to CSV
+- [ ] Expose the selected persisted `job_id` to the customization feature
 - [ ] Add ranking tests for strong, weak, and unrelated job descriptions
 
 **Outcome:** Each retained job has a useful score and understandable reason.
@@ -88,8 +109,12 @@ Remember their could be more of these job platforms added from where we could sc
 ## Phase 5: CV Customization
 
 - [ ] Let the user select a job from the results table
-- [ ] Compare the job description with the confirmed profile and original CV
-- [ ] Reorder and reword relevant CV content without inventing facts
+- [ ] Load the selected job, confirmed profile, and stored CV text by user ownership
+- [ ] Add `GET /resumes/templates`, `POST /resumes/customize`, and
+  `POST /resumes/export` routes
+- [ ] Reorder existing CV content with deterministic rules without inventing facts
+- [ ] Allow optional LLM rewriting when a server-side API key is configured
+- [ ] Validate LLM output against the source CV and reject unsupported claims
 - [ ] Clearly flag requested skills that are absent from the CV
 - [ ] Add an editable Next.js preview before export
 - [ ] Create a simple DOCX template with docxtpl
@@ -124,7 +149,9 @@ Remember their could be more of these job platforms added from where we could sc
 ## MVP Rules
 
 - Scraping and basic ranking must work without an AI API.
+- Rules-based CV customization must work without an AI API.
 - One failed scraper must not stop other sources.
 - Generated CVs must never invent experience, education, or skills.
 - Shared models are the contract between modules.
 - Each phase requires focused tests before the next integration step.
+- Both developers must review a phase and record contract changes before coding.

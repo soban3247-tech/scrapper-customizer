@@ -13,8 +13,9 @@ Future phases will rank the jobs and generate a tailored CV for a selected role.
 5. Each scraper returns jobs in one shared format for the frontend to display.
 6. Planned modules will rank jobs, explain each score, and customize the CV.
 
-See [Architecture](docs/ARCHITECTURE.md) and [Development Plan](docs/PLAN.md)
-for design decisions and project phases.
+See [Architecture](docs/ARCHITECTURE.md), [Development Plan](docs/PLAN.md), and
+[Implementation Order](docs/IMPLEMENTATION_ORDER.md) for design decisions,
+project phases, and the planned two-developer workflow.
 
 ## Technology
 
