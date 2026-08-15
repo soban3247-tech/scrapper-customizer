@@ -1,137 +1,165 @@
 # Job Scraper and CV Customizer
 
-A web application that extracts a profile from a CV, finds relevant jobs, ranks
-them with explainable rules, and helps tailor the CV for a selected role.
+A web application that reads a CV, extracts the candidate's skills and target
+roles, searches selected job sources, and displays normalized application links.
+Future phases will rank the jobs and generate a tailored CV for a selected role.
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Development plan](docs/PLAN.md)
+## How It Works
+
+1. The user uploads a PDF or DOCX CV in the Next.js frontend.
+2. The FastAPI backend extracts skills, job titles, experience, education, and domain.
+3. The user reviews the extracted profile and edits the job-search settings.
+4. The user selects job sources and starts the search.
+5. Each scraper returns jobs in one shared format for the frontend to display.
+6. Planned modules will rank jobs, explain each score, and customize the CV.
+
+See [Architecture](docs/ARCHITECTURE.md) and [Development Plan](docs/PLAN.md)
+for design decisions and project phases.
 
 ## Technology
 
-- Next.js for the browser frontend
-- FastAPI for the Python HTTP API
-- Pydantic models and modular Python services
-- SQLite for local application data
-- `uv` for Python environments and packages
+- **Frontend:** Next.js, React, and TypeScript
+- **Backend:** FastAPI, Python, and Pydantic
+- **Package managers:** npm for the frontend and `uv` for Python
+- **Storage:** SQLite and local output directories
+- **Testing:** pytest and ESLint
 
 ## Prerequisites
 
-- Git
-- Node.js 20 or newer for the future Next.js frontend
-- Internet access for dependencies and job sources
+Install these tools before starting:
 
-Python does not need to be installed manually because `uv` can manage it.
+- [Git](https://git-scm.com/downloads)
+- [Node.js 20 or newer](https://nodejs.org/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-## Backend Setup
-
-Run these commands from the repository root:
+On Windows, `uv` can be installed from PowerShell with:
 
 ```powershell
 winget install --id astral-sh.uv -e
+```
+
+Restart PowerShell if the `uv` command is not immediately available.
+
+## First-Time Setup
+
+Open PowerShell and run:
+
+```powershell
+git clone https://github.com/soban3247-tech/scrapper-customizer.git
+cd scrapper-customizer
+
 uv python install 3.11
 uv venv --python 3.11
 uv pip install -r backend/requirements.txt
 Copy-Item .env.example .env
+
+Set-Location frontend
+npm ci
+Copy-Item .env.example .env.local
+Set-Location ..
 ```
 
-Restart PowerShell if `uv` is not immediately available.
+The default environment files are enough for the current local workflow. Add
+credentials to `.env` only for optional services that you choose to use. Never
+commit `.env`, `.env.local`, real CVs, or API keys.
 
-Optional AI dependencies are separate from the core application:
+Optional AI dependencies:
 
 ```powershell
 uv pip install -r backend/requirements-ai.txt
 ```
 
-Playwright's browser is only needed by browser-based scraper modules:
+Playwright's Chromium browser is required only by browser-based scraper modules:
 
 ```powershell
 uv run playwright install chromium
 ```
 
-## Run the Backend
+## Run the Project
 
-Start the FastAPI development server:
+The frontend and backend run in separate terminals.
+
+**Terminal 1 - backend** (from the repository root):
 
 ```powershell
-uv run uvicorn job_assistant.api.main:app --app-dir backend/src --reload
+uv run uvicorn job_assistant.api.main:app --app-dir backend/src --reload --port 8000
 ```
 
-The API is available at `http://127.0.0.1:8000`, its health endpoint is
-`http://127.0.0.1:8000/health`, and interactive API documentation is at
-`http://127.0.0.1:8000/docs`.
-
-The original Tkinter scraper remains available during the web migration:
+**Terminal 2 - frontend** (from the repository root):
 
 ```powershell
-uv run python backend/UI.py
-```
-
-## Frontend Setup
-
-Install and run the Next.js application:
-
-```powershell
-cd frontend
-npm install
+Set-Location frontend
 npm run dev
 ```
 
-Open `http://localhost:3000`. Keep the FastAPI server running in a separate
-terminal so CV extraction and job searches can reach the backend.
+Open these addresses:
 
-The current web workflow supports:
+- Web application: `http://localhost:3000`
+- API documentation: `http://localhost:8000/docs`
+- API health check: `http://localhost:8000/health`
 
-1. Uploading a PDF or DOCX CV.
-2. Extracting skills, job titles, experience, education, and domain.
-3. Editing the search title, skills, location, and remote preference.
-4. Selecting scraper sources and entering source-specific configuration.
-5. Running the scrapers and displaying normalized application links.
+If port `8000` is unavailable, start the backend on another port and update
+`NEXT_PUBLIC_API_URL` in `frontend/.env.local` to match it.
 
-The extracted search title drives the current scraper queries. Extracted skills
-are editable and sent with the search request, but relevance filtering and score
-ranking are Phase 4 work; some source results may therefore still be unrelated.
+## Test the Project
 
-## Run Tests
-
-From the repository root:
+Run backend tests from the repository root:
 
 ```powershell
 uv run pytest -c backend/pytest.ini
 ```
 
-## Project Layout
-
-```text
-frontend/                  Next.js pages, components, and feature UI
-backend/
-    src/job_assistant/
-        api/               FastAPI application and routes
-        models/            Shared Pydantic data contracts
-        resume/            CV reading and profile extraction
-        scrapers/          One adapter per job source
-        matching/          Job filtering, scoring, and explanations
-        customizer/        CV tailoring and rendering
-        storage/           SQLite and export repositories
-    tests/                 Backend unit and integration tests
-    UI.py                  Temporary Tkinter compatibility application
-    requirements.txt       Core Python dependencies
-docs/                      Architecture and development plan
-templates/                 Version-controlled CV templates
-data/                      Local database files
-uploads/                   Private CV uploads
-outputs/                   Generated CVs and job exports
-```
-
-The contents of `data/`, `uploads/`, and `outputs/`, plus `.env`, are ignored by
-Git. Never commit real CVs, generated documents, databases, or credentials.
-
-## Updating Dependencies
-
-After editing a Python dependency file:
+Check the frontend from the repository root:
 
 ```powershell
-uv pip install -r backend/requirements.txt
+Set-Location frontend
+npm run lint
+npm run build
 ```
 
-Frontend dependencies are managed by `frontend/package.json` and
-`frontend/package-lock.json`.
+## Project Structure
+
+```text
+scrapper-customizer/
+|-- backend/
+|   |-- src/job_assistant/
+|   |   |-- api/           FastAPI routes used by the frontend
+|   |   |-- models/        Shared data models
+|   |   |-- resume/        CV reading and profile extraction
+|   |   |-- scrapers/      Separate adapters for each job source
+|   |   |-- matching/      Job filtering, ranking, and explanations
+|   |   |-- customizer/    Tailored CV generation
+|   |   `-- storage/       Profile, job, and export storage
+|   |-- tests/             Backend unit and integration tests
+|   |-- UI.py              Temporary legacy Tkinter interface
+|   `-- requirements.txt   Core Python dependencies
+|-- frontend/
+|   |-- src/app/           Next.js pages and global styles
+|   |-- src/features/      Feature-specific React components
+|   |-- src/lib/           FastAPI client and shared utilities
+|   `-- package.json       Frontend dependencies and commands
+|-- docs/                  Architecture and development plan
+|-- templates/             CV templates
+|-- data/                  Local database files (not committed)
+|-- uploads/               Uploaded CVs (not committed)
+|-- outputs/               Generated files and exports (not committed)
+|-- .env.example           Backend environment-variable template
+`-- README.md              Project setup and overview
+```
+
+The modules are intentionally separate: the frontend calls the API, while CV
+extraction, scraping, matching, customization, and storage can be developed and
+tested independently behind the backend routes.
+
+## Current Status
+
+CV upload, profile extraction, editable search settings, source selection, and
+job searching are connected through the web interface. Relevance filtering,
+explainable ranking, CSV export, and tailored CV generation are later phases and
+should not be considered complete yet.
+
+The legacy Tkinter application can still be started from the repository root:
+
+```powershell
+uv run python backend/UI.py
+```
