@@ -3,8 +3,10 @@ pandas>=2.2
 requests>=2.32
 openpyxl>=3.1
 
-# Planned user interface and data models
-streamlit>=1.42
+# Web API and data models
+fastapi>=0.116
+uvicorn[standard]>=0.35
+python-multipart>=0.0.20
 pydantic>=2.10
 python-dotenv>=1.0
 
@@ -22,4 +24,5 @@ scikit-learn>=1.6
 
 # Testing
 pytest>=8.3
+httpx>=0.28
 reportlab>=4.2  # Generate synthetic PDF test fixtures

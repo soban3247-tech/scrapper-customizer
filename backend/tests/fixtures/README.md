@@ -17,9 +17,8 @@ reader-to-profile integration tests:
 Regenerate both fixtures after installing the project requirements:
 
 ```powershell
-uv run python tests/fixtures/generate_sample_cvs.py
+uv run python backend/tests/fixtures/generate_sample_cvs.py
 ```
 
 The names, employers, universities, and work histories in these files are test
 data and do not describe real people.
-

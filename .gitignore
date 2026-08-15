@@ -37,9 +37,14 @@ exports/
 test-results/
 playwright-report/
 
+# Next.js and Node.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+
 # Editors and operating systems
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-

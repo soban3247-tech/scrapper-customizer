@@ -1,7 +1,7 @@
 # Development Plan
 
-This plan turns the existing scraper into the MVP described in
-[ARCHITECTURE.md](ARCHITECTURE.md). Check an item when it is implemented and
+This plan turns the existing scraper into the Next.js and FastAPI MVP described
+in [ARCHITECTURE.md](ARCHITECTURE.md). Check an item when it is implemented and
 tested.
 
 ## Phase 0: Project Setup
@@ -12,6 +12,10 @@ tested.
 - [x] Add `.gitignore` for `.venv`, generated CVs, databases, and secrets
 - [x] Add `.env.example` for optional API keys
 - [x] Create the planned package and test directories
+- [x] Move backend code and tests into `backend/`
+- [x] Move project documentation into `docs/`
+- [x] Create the feature-oriented `frontend/` scaffold
+- [x] Add the FastAPI application and health endpoint
 
 **Outcome:** A new developer can install and understand the project.
 
@@ -50,16 +54,20 @@ Remember their could be more of these job platforms added from where we could sc
 
 **Outcome:** The user can upload a CV and confirm an accurate profile.
 
-## Phase 3: Search and Scraping Interface
+## Phase 3: FastAPI and Next.js Interface
 
-- [ ] Create the Streamlit application entry point
-- [ ] Prefill search fields from the confirmed profile
-- [ ] Allow job title, skills, location, date, and page limits to be edited
-- [ ] Allow sources to be selected independently
-- [ ] Collect any source-specific board names or API credentials
-- [ ] Run selected scrapers and show progress and source errors
-- [ ] Continue the search when one source fails
-- [ ] Remove the Tkinter UI after Streamlit reaches feature parity
+- [x] Create the FastAPI application entry point and health route
+- [x] Add the CV profile extraction API route
+- [ ] Add the confirmed profile update API route
+- [x] Add the job source discovery and search API routes
+- [x] Initialize the Next.js application in `frontend/`
+- [x] Build the CV upload and editable search profile feature
+- [x] Prefill search fields from the extracted profile
+- [x] Allow job title, skills, location, date, and page limits to be edited
+- [x] Allow sources to be selected independently
+- [x] Collect source-specific board names or approved API credentials
+- [x] Show scraping progress and source errors
+- [ ] Remove compatibility UI code after the web flow reaches feature parity
 
 **Outcome:** The user can configure and run a multi-source job search.
 
@@ -70,7 +78,7 @@ Remember their could be more of these job platforms added from where we could sc
 - [ ] Limit the effect of repeated keywords
 - [ ] Record matched skills, missing skills, and a short ranking explanation
 - [ ] Sort results from highest to lowest score
-- [ ] Display results in a searchable table with application links
+- [ ] Display results in a Next.js searchable table with application links
 - [ ] Save normalized jobs and match details to SQLite
 - [ ] Export the displayed results to CSV
 - [ ] Add ranking tests for strong, weak, and unrelated job descriptions
@@ -83,7 +91,7 @@ Remember their could be more of these job platforms added from where we could sc
 - [ ] Compare the job description with the confirmed profile and original CV
 - [ ] Reorder and reword relevant CV content without inventing facts
 - [ ] Clearly flag requested skills that are absent from the CV
-- [ ] Add an editable preview before export
+- [ ] Add an editable Next.js preview before export
 - [ ] Create a simple DOCX template with docxtpl
 - [ ] Create a second professional DOCX template
 - [ ] Export the selected version as DOCX
@@ -111,7 +119,7 @@ Remember their could be more of these job platforms added from where we could sc
 - [ ] Add semantic ranking with embeddings
 - [ ] Add more job sources and CV templates
 - [ ] Track applications and their status
-- [ ] Consider a FastAPI and React interface only if Streamlit becomes limiting
+- [ ] Add background job processing if scraping duration requires it
 
 ## MVP Rules
 
