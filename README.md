@@ -1,152 +1,183 @@
 # Job Scraper and CV Customizer
 
-A Python application that finds relevant jobs, ranks them against a user's CV,
-and helps tailor the CV for a selected role. The MVP uses explainable matching
-rules and must never add experience, education, or skills that are absent from
-the original CV.
+A web application that reads a CV, extracts the candidate's skills and target
+roles, searches selected job sources, and displays normalized application links.
+Future phases will rank the jobs and generate a tailored CV for a selected role.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the workflow and module design, and
-[PLAN.md](PLAN.md) for the implementation checklist.
+## How It Works
+
+1. The user uploads a PDF or DOCX CV in the Next.js frontend.
+2. The FastAPI backend extracts skills, job titles, experience, education, and domain.
+3. The user reviews the extracted profile and edits the job-search settings.
+4. The user selects job sources and starts the search.
+5. Each scraper returns jobs in one shared format for the frontend to display.
+6. Planned modules will rank jobs, explain each score, and customize the CV.
+
+See [Architecture](docs/ARCHITECTURE.md), [Development Plan](docs/PLAN.md), and
+[Implementation Order](docs/IMPLEMENTATION_ORDER.md) for design decisions,
+project phases, and the planned two-developer workflow.
+
+## Technology
+
+- **Frontend:** Next.js, React, and TypeScript
+- **Backend:** FastAPI, Python, and Pydantic
+- **Package managers:** npm for the frontend and `uv` for Python
+- **Storage:** SQLite and local output directories
+- **Testing:** pytest, Vitest, ESLint, and the Next.js production build
 
 ## Prerequisites
 
-- Git
-- Windows 10 or newer
-- Internet access for package installation and job sources
+Install these tools before starting:
 
-Python does not need to be installed manually because `uv` can install and
-manage the required version.
+- [Git](https://git-scm.com/downloads)
+- [Node.js 20 or newer](https://nodejs.org/)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-## First-time setup with uv
-
-### 1. Clone the repository
-
-```powershell
-cd D:\SaaS
-git clone https://github.com/soban3247-tech/scrapper-customizer.git
-cd scrapper-customizer
-```
-
-To work from the current planning branch:
-
-```powershell
-git switch agent/project-planning
-```
-
-### 2. Install uv
+On Windows, `uv` can be installed from PowerShell with:
 
 ```powershell
 winget install --id astral-sh.uv -e
 ```
 
-Restart PowerShell if `uv` is not immediately available.
+Restart PowerShell if the `uv` command is not immediately available.
 
-### 3. Install Python and the required packages
+## First-Time Setup
+
+Open PowerShell and run:
 
 ```powershell
+git clone https://github.com/soban3247-tech/scrapper-customizer.git
+cd scrapper-customizer
+
 uv python install 3.11
 uv venv --python 3.11
-uv pip install -r requirements.txt
-```
-
-Activation is optional when commands are prefixed with `uv run`. To activate the
-environment manually in PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### 4. Create the local configuration
-
-```powershell
+uv pip install -r backend/requirements.txt
 Copy-Item .env.example .env
+
+Set-Location frontend
+npm ci
+Copy-Item .env.example .env.local
+Set-Location ..
 ```
 
-The core scraper does not require an AI key. Add credentials to `.env` only when
-you intentionally enable an optional integration. The `.env` file is ignored by
-Git.
+The backend command below automatically loads the repository-root `.env`, and
+Next.js loads `frontend/.env.local`. The default environment files are enough
+for the current local workflow. Add
+credentials to `.env` only for optional services that you choose to use. Never
+commit `.env`, `.env.local`, real CVs, or API keys.
 
-### 5. Install the optional browser
+Optional AI dependencies:
 
-This is needed only by scraper modules that use Playwright:
+```powershell
+uv pip install -r backend/requirements-ai.txt
+```
+
+Playwright's Chromium browser is required only by browser-based scraper modules:
 
 ```powershell
 uv run playwright install chromium
 ```
 
-### 6. Install optional AI packages
+## Run the Project
 
-The MVP's scraping and basic ranking work without these packages. Install them
-only when developing AI-assisted profile extraction or CV customization:
+The frontend and backend run in separate terminals.
 
-```powershell
-uv pip install -r requirements-ai.txt
-```
-
-## Run the application
-
-The current application uses Tkinter:
+**Terminal 1 - backend** (from the repository root):
 
 ```powershell
-uv run python UI.py
+uv run uvicorn job_assistant.api.main:app --app-dir backend/src --reload --port 8000
 ```
 
-After the planned Streamlit interface is implemented, run it with:
+**Terminal 2 - frontend** (from the repository root):
 
 ```powershell
-uv run streamlit run app.py
+Set-Location frontend
+npm run dev
 ```
 
-## Run tests
+Open these addresses:
+
+- Web application: `http://localhost:3000`
+- API documentation: `http://localhost:8000/docs`
+- API health check: `http://localhost:8000/health`
+
+If port `8000` is unavailable, start the backend on another port and update
+`NEXT_PUBLIC_API_URL` in `frontend/.env.local` to match it.
+
+## Stop the Project
+
+Press `Ctrl+C` in each terminal. If either service keeps running, use this single
+PowerShell command to stop both the frontend on port `3000` and the backend on
+port `8000`:
 
 ```powershell
-uv run pytest
+Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 3000, 8000 } | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /PID $_ /T /F }
 ```
 
-## Project layout
+## Test the Project
+
+Run backend tests from the repository root:
+
+```powershell
+uv run pytest -c backend/pytest.ini
+```
+
+Check the frontend from the repository root:
+
+```powershell
+Set-Location frontend
+npm test
+npm run lint
+npm run build
+```
+
+## Project Structure
 
 ```text
-src/job_assistant/   Core models and business logic
-ui/                  Streamlit screens and session-state helpers
-tests/unit/          Fast tests for individual functions and classes
-tests/integration/   Tests for workflows across multiple modules
-tests/fixtures/      Synthetic and anonymized test inputs only
-templates/           Version-controlled DOCX templates
-data/                Local SQLite data (contents ignored by Git)
-uploads/             Private user CVs (contents ignored by Git)
-outputs/             Generated CVs and exports (contents ignored by Git)
+scrapper-customizer/
+|-- backend/
+|   |-- src/job_assistant/
+|   |   |-- api/           FastAPI routes used by the frontend
+|   |   |-- models/        Shared data models
+|   |   |-- resume/        CV reading and profile extraction
+|   |   |-- scrapers/      Separate adapters for each job source
+|   |   |-- matching/      Job filtering, ranking, and explanations
+|   |   |-- customizer/    Tailored CV generation
+|   |   `-- storage/       Profile, job, and export storage
+|   |-- tests/             Backend unit and integration tests
+|   |-- UI.py              Temporary legacy Tkinter interface
+|   `-- requirements.txt   Core Python dependencies
+|-- frontend/
+|   |-- src/app/           Next.js pages and global styles
+|   |-- src/features/      Feature-specific React components
+|   |-- src/lib/           FastAPI client and shared utilities
+|   `-- package.json       Frontend dependencies and commands
+|-- docs/                  Architecture and development plan
+|-- templates/             CV templates
+|-- data/                  Local database files (not committed)
+|-- uploads/               Uploaded CVs (not committed)
+|-- outputs/               Generated files and exports (not committed)
+|-- .env.example           Backend environment-variable template
+`-- README.md              Project setup and overview
 ```
 
-## Everyday Git workflow
+The modules are intentionally separate: the frontend calls the API, while CV
+extraction, scraping, matching, customization, and storage can be developed and
+tested independently behind the backend routes.
 
-Start a branch for one focused piece of work:
+## Current Status
+
+CV upload, profile extraction, editable search settings, source selection, and
+job searching are connected through the web interface. Location matching uses
+case-insensitive token or phrase boundaries in the normalized job location;
+remote-only searches require an explicit remote marker in the job location or
+workplace type.
+Relevance filtering,
+explainable ranking, CSV export, and tailored CV generation are later phases and
+should not be considered complete yet.
+
+The legacy Tkinter application can still be started from the repository root:
 
 ```powershell
-git switch agent/project-planning
-git pull
-git switch -c feature/project-foundation
+uv run python backend/UI.py
 ```
-
-Review and save your changes:
-
-```powershell
-git status
-git diff
-git add README.md PLAN.md .gitignore .env.example
-git commit -m "chore: complete project foundation"
-git push -u origin feature/project-foundation
-```
-
-Then open GitHub and create a pull request from the feature branch into
-`agent/project-planning`. Do not commit `.venv`, `.env`, real CVs, databases,
-generated CVs, or API credentials.
-
-## Updating dependencies
-
-After changing a dependency file, synchronize the environment:
-
-```powershell
-uv pip install -r requirements.txt
-```
-
-For optional AI development, use `requirements-ai.txt` instead.
