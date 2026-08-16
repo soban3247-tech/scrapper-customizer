@@ -65,8 +65,10 @@ Remember their could be more of these job platforms added from where we could sc
 - [x] Prefill search fields from the extracted profile
 - [x] Allow job title, skills, location, date, and page limits to be edited
 - [x] Allow sources to be selected independently
-- [x] Collect source-specific board names or approved API credentials
-- [x] Show scraping progress and source errors
+- [x] Collect source-specific board names
+- [ ] Collect approved API credentials when an approved adapter is enabled
+- [x] Show an overall search loading state and source errors after completion
+- [ ] Show source-level progress while scrapers run
 - [ ] Remove compatibility UI code after the web flow reaches feature parity
 
 **Outcome:** The user can configure and run a multi-source job search.

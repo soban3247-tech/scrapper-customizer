@@ -23,7 +23,7 @@ project phases, and the planned two-developer workflow.
 - **Backend:** FastAPI, Python, and Pydantic
 - **Package managers:** npm for the frontend and `uv` for Python
 - **Storage:** SQLite and local output directories
-- **Testing:** pytest and ESLint
+- **Testing:** pytest, Vitest, ESLint, and the Next.js production build
 
 ## Prerequisites
 
@@ -60,7 +60,9 @@ Copy-Item .env.example .env.local
 Set-Location ..
 ```
 
-The default environment files are enough for the current local workflow. Add
+The backend command below automatically loads the repository-root `.env`, and
+Next.js loads `frontend/.env.local`. The default environment files are enough
+for the current local workflow. Add
 credentials to `.env` only for optional services that you choose to use. Never
 commit `.env`, `.env.local`, real CVs, or API keys.
 
@@ -124,6 +126,7 @@ Check the frontend from the repository root:
 
 ```powershell
 Set-Location frontend
+npm test
 npm run lint
 npm run build
 ```
@@ -165,7 +168,11 @@ tested independently behind the backend routes.
 ## Current Status
 
 CV upload, profile extraction, editable search settings, source selection, and
-job searching are connected through the web interface. Relevance filtering,
+job searching are connected through the web interface. Location matching uses
+case-insensitive token or phrase boundaries in the normalized job location;
+remote-only searches require an explicit remote marker in the job location or
+workplace type.
+Relevance filtering,
 explainable ranking, CSV export, and tailored CV generation are later phases and
 should not be considered complete yet.
 
