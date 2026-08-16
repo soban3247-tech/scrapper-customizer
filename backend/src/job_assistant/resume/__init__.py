@@ -14,7 +14,13 @@ from .extractor import (
     extract_profile,
     extract_profile_with_evidence,
 )
-from .reader import ResumeDocument, ResumeFormat, read_resume, read_resume_bytes
+from .reader import (
+    DEFAULT_MAX_FILE_SIZE,
+    ResumeDocument,
+    ResumeFormat,
+    read_resume,
+    read_resume_bytes,
+)
 from .profile_editor import (
     profile_form_defaults,
     validate_profile_corrections,
@@ -22,6 +28,7 @@ from .profile_editor import (
 )
 
 __all__ = [
+    "DEFAULT_MAX_FILE_SIZE",
     "EmptyResumeTextError",
     "EncryptedResumeError",
     "ExtractionEvidence",

@@ -12,6 +12,7 @@ from job_assistant.scrapers import (
     collect_jobs,
     create_default_registry,
     filter_jobs_by_date,
+    filter_jobs_by_preferences,
 )
 
 from ..schemas import JobSearchResponse
@@ -40,6 +41,11 @@ async def search_jobs(
     missing_date_count = 0
     if config.posted_after is not None:
         jobs, missing_date_count = filter_jobs_by_date(jobs, config.posted_after)
+    jobs = filter_jobs_by_preferences(
+        jobs,
+        location=config.location,
+        remote_only=config.remote_only,
+    )
     return JobSearchResponse(
         jobs=jobs,
         issues=issues,

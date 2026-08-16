@@ -22,6 +22,7 @@ import {
   searchJobs,
   SourceDescriptor,
 } from "@/lib/api";
+import { serializeSelectedSourceOptions } from "./source-options";
 
 type SearchDraft = {
   query: string;
@@ -40,6 +41,7 @@ const initialDate = new Date(today.getFullYear(), today.getMonth(), today.getDat
 
 export function CvWorkflow() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const extractionRequestRef = useRef(0);
   const [file, setFile] = useState<File | null>(null);
   const [extraction, setExtraction] = useState<ProfileExtraction | null>(null);
   const [sources, setSources] = useState<SourceDescriptor[]>([]);
@@ -64,15 +66,20 @@ export function CvWorkflow() {
       setError("Choose a PDF or DOCX CV.");
       return;
     }
+    extractionRequestRef.current += 1;
     setFile(nextFile);
     setExtraction(null);
     setDraft(null);
     setResults(null);
+    setSourceOptions({});
+    setIsExtracting(false);
     setError("");
   }
 
   async function handleExtract() {
     if (!file) return;
+    const requestId = extractionRequestRef.current + 1;
+    extractionRequestRef.current = requestId;
     setIsExtracting(true);
     setError("");
     try {
@@ -80,6 +87,7 @@ export function CvWorkflow() {
         extractCv(file),
         loadSources(),
       ]);
+      if (requestId !== extractionRequestRef.current) return;
       setExtraction(profileResult);
       setSources(availableSources);
       setDraft({
@@ -92,15 +100,23 @@ export function CvWorkflow() {
         sources: profileResult.suggested_search.sources,
       });
     } catch (requestError) {
+      if (requestId !== extractionRequestRef.current) return;
       setError(requestError instanceof Error ? requestError.message : "CV extraction failed.");
     } finally {
-      setIsExtracting(false);
+      if (requestId === extractionRequestRef.current) setIsExtracting(false);
     }
   }
 
   function toggleSource(sourceId: string) {
     if (!draft) return;
     const selected = draft.sources.includes(sourceId);
+    if (selected) {
+      setSourceOptions((current) => {
+        const next = { ...current };
+        delete next[sourceId];
+        return next;
+      });
+    }
     setDraft({
       ...draft,
       sources: selected
@@ -123,18 +139,8 @@ export function CvWorkflow() {
     setIsSearching(true);
     setError("");
     setResults(null);
-    const options = Object.fromEntries(
-      Object.entries(sourceOptions).map(([source, values]) => [
-        source,
-        Object.fromEntries(
-          Object.entries(values).map(([key, value]) => [
-            key,
-            value.includes(",") ? value.split(",").map((item) => item.trim()).filter(Boolean) : value,
-          ]),
-        ),
-      ]),
-    );
     try {
+      const options = serializeSelectedSourceOptions(draft.sources, sources, sourceOptions);
       setResults(
         await searchJobs({
           query: draft.query,
@@ -261,6 +267,7 @@ export function CvWorkflow() {
                     <span>{source.display_name}: {field.label}{field.required ? " *" : ""}</span>
                     <input
                       type={field.kind === "secret" ? "password" : field.kind === "integer" ? "number" : "text"}
+                      autoComplete={field.kind === "secret" ? "new-password" : undefined}
                       placeholder={field.help_text ?? undefined}
                       value={sourceOptions[source.source_id]?.[field.key] ?? ""}
                       onChange={(e) => setSourceOptions({ ...sourceOptions, [source.source_id]: { ...sourceOptions[source.source_id], [field.key]: e.target.value } })}

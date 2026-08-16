@@ -30,8 +30,52 @@ class FakeScraper:
         )
 
 
+class PreferenceScraper:
+    source_id = "Preferences"
+    display_name = "Preference Fixtures"
+    capabilities = ScraperCapabilities()
+
+    def search(self, config: SearchConfig) -> ScrapeResult:
+        return ScrapeResult(
+            source_id=self.source_id,
+            jobs=[
+                Job(
+                    source=self.source_id,
+                    source_job_id="karachi-onsite",
+                    title="Backend Engineer",
+                    company="Example Co",
+                    location="Karachi, Pakistan",
+                    workplace_type="On-site",
+                    apply_url="https://example.com/jobs/karachi-onsite",
+                ),
+                Job(
+                    source=self.source_id,
+                    source_job_id="karachi-remote",
+                    title="Backend Engineer",
+                    company="Example Co",
+                    location="Karachi, Pakistan",
+                    workplace_type="Remote",
+                    apply_url="https://example.com/jobs/karachi-remote",
+                ),
+                Job(
+                    source=self.source_id,
+                    source_job_id="lahore-remote",
+                    title="Backend Engineer",
+                    company="Example Co",
+                    location="Lahore, Pakistan",
+                    workplace_type="Remote",
+                    apply_url="https://example.com/jobs/lahore-remote",
+                ),
+            ],
+        )
+
+
 def _fake_registry() -> ScraperRegistry:
     return ScraperRegistry([FakeScraper()])
+
+
+def _preference_registry() -> ScraperRegistry:
+    return ScraperRegistry([PreferenceScraper()])
 
 
 def test_lists_registered_sources() -> None:
@@ -64,3 +108,23 @@ def test_searches_with_normalized_config() -> None:
     payload = response.json()
     assert payload["jobs"][0]["title"] == "Backend Engineer"
     assert payload["jobs"][0]["tags"] == ["Python", "FastAPI"]
+
+
+def test_search_applies_location_and_remote_only_filters_together() -> None:
+    app.dependency_overrides[get_scraper_registry] = _preference_registry
+    try:
+        response = TestClient(app).post(
+            "/jobs/search",
+            json={
+                "query": "Backend Engineer",
+                "sources": ["Preferences"],
+                "location": "  KARACHI  ",
+                "remote_only": True,
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    jobs = response.json()["jobs"]
+    assert [job["source_job_id"] for job in jobs] == ["karachi-remote"]

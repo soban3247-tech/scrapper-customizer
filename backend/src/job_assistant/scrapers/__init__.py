@@ -27,7 +27,12 @@ from .remotive import RemotiveScraper
 from .remote_ok import RemoteOkScraper
 from .registry import ScraperRegistry
 from .defaults import create_default_registry
-from .service import collect_jobs, deduplicate_jobs, filter_jobs_by_date
+from .service import (
+    collect_jobs,
+    deduplicate_jobs,
+    filter_jobs_by_date,
+    filter_jobs_by_preferences,
+)
 
 __all__ = [
     "ArbeitnowScraper",
@@ -56,5 +61,6 @@ __all__ = [
     "create_default_registry",
     "deduplicate_jobs",
     "filter_jobs_by_date",
+    "filter_jobs_by_preferences",
 ]
 
