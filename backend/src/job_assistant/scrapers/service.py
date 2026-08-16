@@ -1,7 +1,8 @@
 """Cross-source collection, deduplication, and date filtering."""
 
-from datetime import date
+import re
 from collections.abc import Iterable
+from datetime import date
 
 from job_assistant.models import Job, SearchConfig
 
@@ -38,6 +39,55 @@ def filter_jobs_by_date(
         elif start_date <= job.posted_date <= upper_bound:
             filtered.append(job)
     return filtered, missing_date_count
+
+
+def filter_jobs_by_preferences(
+    jobs: Iterable[Job],
+    *,
+    location: str | None,
+    remote_only: bool,
+) -> list[Job]:
+    """Apply the shared location and remote-only search contract.
+
+    Location matching requires a contiguous, case-insensitive token phrase in
+    the job location. Remote-only searches retain jobs whose location or
+    workplace type explicitly identifies them as remote. Jobs with missing or
+    ambiguous values are excluded when the related filter is requested.
+    """
+    requested_location = _tokenize_location(location)
+    filtered: list[Job] = []
+
+    for job in jobs:
+        job_location = _normalize_filter_text(job.location)
+        workplace_type = _normalize_filter_text(job.workplace_type)
+
+        if requested_location and not _contains_token_phrase(
+            _tokenize_location(job.location), requested_location
+        ):
+            continue
+        if remote_only and "remote" not in f"{job_location} {workplace_type}":
+            continue
+        filtered.append(job)
+
+    return filtered
+
+
+def _normalize_filter_text(value: str | None) -> str:
+    return " ".join((value or "").casefold().split())
+
+
+def _tokenize_location(value: str | None) -> tuple[str, ...]:
+    return tuple(re.findall(r"[^\W_]+", (value or "").casefold()))
+
+
+def _contains_token_phrase(
+    location_tokens: tuple[str, ...], requested_tokens: tuple[str, ...]
+) -> bool:
+    phrase_length = len(requested_tokens)
+    return any(
+        location_tokens[index : index + phrase_length] == requested_tokens
+        for index in range(len(location_tokens) - phrase_length + 1)
+    )
 
 
 def deduplicate_jobs(jobs: Iterable[Job]) -> list[Job]:
