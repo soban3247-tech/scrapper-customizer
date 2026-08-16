@@ -64,10 +64,29 @@ export type JobSearchResponse = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export function formatApiErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (!Array.isArray(detail)) return null;
+
+  const messages = detail.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const entry = item as { loc?: unknown; msg?: unknown };
+    if (typeof entry.msg !== "string") return [];
+    const location = Array.isArray(entry.loc)
+      ? entry.loc.filter((part) => part !== "body").map(String).join(" → ")
+      : "";
+    return [location ? `${location}: ${entry.msg}` : entry.msg];
+  });
+
+  return messages.length > 0 ? messages.join("; ") : null;
+}
+
 async function readResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed with status ${response.status}`);
+    const body = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+    throw new Error(
+      formatApiErrorDetail(body?.detail) ?? `Request failed with status ${response.status}`,
+    );
   }
   return response.json() as Promise<T>;
 }
